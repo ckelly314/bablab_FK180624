@@ -1,3 +1,12 @@
+"""
+File: pH_and_reactions_Cox.py
+-----------------------------
+
+Calculates the pH increase per organic carbon remineralized by denitrification
+for the estimated organic matter composition based on FK180624 data.
+Maps delta_pH for a range of DIC and TA values.
+"""
+
 import os
 import pandas as pd
 import numpy as np
@@ -68,6 +77,6 @@ plt.tick_params(axis='y',labelsize = 16)
 plt.xlim((-2.5,1.5))
 plt.ylim((-0.004,0.006))
 fig.tight_layout()
-plt.savefig('figures/pH/delta_pH_Cox_falkor.png', dpi = 500)
+plt.savefig('figures/delta_pH_Cox_falkor.pdf')#, dpi = 500)
 
 

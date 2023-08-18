@@ -8,10 +8,10 @@ import scipy as sc
 import statsmodels.api as sm
 
 # Set Directory
-file_path = 'OM_variations/experimental/{}'
+file_path = 'OM_variations/experimental2/{}'
 data_path = 'output/{}'.format(file_path)
-fig_path = 'figures/{}'.format(file_path)
-fig_format = 'png'
+fig_path = 'figures/{}'#.format(file_path)
+fig_format = 'pdf'
 dpi = 500
 fs = 13
 ff = 'arial'
@@ -55,9 +55,9 @@ vmin=0, vmax=0.1, linewidths=0.5)
 hm.set_yticks(ticks= np.arange(0.5, 16.5, 1))
 hm.set_yticklabels(labels = ylab, size=8, rotation = 0)
 hm.set_xticklabels(['DNRN',  'Denitrification', 'Anammox', 'Nitrite Oxidation','$CaCO_3$ Dissolution'], rotation=45,horizontalalignment = 'right')
-hm.set_title('Standart Deviation')
+hm.set_title('Standard Deviation')
 fig1.tight_layout(pad=2.5)
-plt.savefig(fig_path.format('reaction_coefficients.{}'.format(fig_format)), dpi = dpi)
+plt.savefig(fig_path.format('reaction_coefficients.{}'.format(fig_format)))#, dpi = dpi)
 
 # Residuals  Heat Maps
 fig2, (ax1, ax2) = plt.subplots(1,2, figsize= (9,5))

@@ -1,3 +1,14 @@
+"""
+File: pH_and_reactions.py
+----------------------------
+
+Calculates the pH increase per organic carbon remineralized by denitrification
+for various organic matter compositions with varying carbon oxidation states
+for a range of DIC and TA values observed in the ETNP ODZ.
+Plots delta_pH versus carbon oxidation state.
+"""
+
+
 import os
 import pandas as pd
 import numpy as np
@@ -37,5 +48,6 @@ cb.set_label('$\Delta$pH per $C_{org}$ remineralized', fontsize = 16)
 plt.tick_params(axis='x',labelsize = 16)
 plt.tick_params(axis='y',labelsize = 16)
 cb.ax.tick_params(labelsize = 16)
-plt.savefig('figures/pH/delta_pH_contour_denit_new.svg', dpi = 500)
+plt.savefig('figures/delta_pH_contour_denit_new.pdf')
+plt.show()
 print('Done')

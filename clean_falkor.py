@@ -1,3 +1,43 @@
+"""
+File: clean_falkor.py
+---------------------
+
+Selects the measurement with 2 and 6 flags.
+Calculates DIC using PyCO2SYS and density using TEOS-10 GSW packages.
+Saves the analyzed variables and data as a .csv file.
+
+INPUT:
+    :bottle_data.csv: .csv file with cruise data and the following columns:
+        'STNNBR'
+        'CASTNO'
+        'LATITUDE'
+        'LONGITUDE'
+        'CTDPRS'
+        'CTDTMP'
+        'CTDSAL'
+        'CTDS_FLAG_W'
+        'CTDOXY'
+        'CTDOXY_FLAG_W'
+        'FLOR'
+        'FLOR_FLAG_W'
+        'NOx_FLAG_W'
+        'NITRIT_BabLab'
+        'NITRIT_FLAG_W'
+        'PHSPHT'
+        'PHSPHT_FLAG_W'
+        'NH4_FLAG_W'
+        'PH_TOT'
+        'PH_TOT_FLAG_W'
+        'PH_TEMP'
+        'TA_FLAG_W'
+OUTPUT:
+    :falkor_clean.csv: .csv file with bad flagged data filtered out and calculated params:
+        -absolute salinity (calculated with gsw)
+        -conservative temperature (calculated with gsw)
+        -DIC (calculated with pyCO2SYS)
+        -pH insitu (calculated with pyCO2SYS)
+"""
+
 ## Import Libraries
 import pandas as pd
 import numpy as np
@@ -5,7 +45,33 @@ import gsw
 import PyCO2SYS as pyco2
 
 # Import Parameters and Results
-falkor = pd.read_csv('../Python Version/falkor.csv')
+# need to add na_values so that pyco2sys doesn't try to solve carbonate system with TA=-999
+falkor = pd.read_csv('bottle_data.csv',
+                     na_values = [-9,-999])
+# need to rename columns from BCO-DMO file to match cols in clean_falkor.py
+cols = {'STNNBR':'station',
+        'CASTNO':'cast',
+        'LATITUDE':'lat',
+        'LONGITUDE':'lon',
+        'CTDPRS':'press',
+        'CTDTMP':'temperature',
+        'CTDSAL':'sal',
+        'CTDS_FLAG_W':'sal_flag',
+        'CTDOXY':'O2',
+        'CTDOXY_FLAG_W':'O2_flag',
+        'FLOR':'fluor',
+        'FLOR_FLAG_W':'fluor_flag',
+        'NOx_FLAG_W':'NOx_flag',
+        'NITRIT_BabLab':'NO2',
+        'NITRIT_FLAG_W':'NO2_flag',
+        'PHSPHT':'phosphate',
+        'PHSPHT_FLAG_W':'phosphate_flag',
+        'NH4_FLAG_W':'NH4_flag',
+        'PH_TOT':'pH_tot',
+        'PH_TOT_FLAG_W':'pH_tot_flag',
+        'PH_TEMP':'pH_temp', # how interchangeable is this with CTD temp?
+        'TA_FLAG_W':'TA_flag'}
+falkor = falkor.rename(columns = cols)
 
 # Select Flagged Bad Data
 st2_cast5 = falkor.index[(falkor['station']==2)&(falkor['cast']==5)].tolist()
@@ -32,7 +98,7 @@ falkor['pH_insitu'] = Z['pH_out']
 T = np.array(falkor['temperature'])[idx_flag] # degrees C
 S = np.array(falkor['sal'])[idx_flag] # psu
 P = np.array(falkor['press'])[idx_flag] # dbar
-rho = np.array(falkor['density'])[idx_flag] # kg/m3
+rho = np.array(falkor['rho'])[idx_flag] # kg/m3
 sigma0 = np.array(falkor['sigma0'])[idx_flag] # kg/m3 # 
 DIC = np.array(falkor['DIC'])[idx_flag] #umol/kg  
 DIP = np.array(falkor['phosphate'])[idx_flag]/rho*1000 #umol/kg

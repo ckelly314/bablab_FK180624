@@ -1,3 +1,56 @@
+"""
+File: calc_falkor_outputs.py
+----------------------------
+
+Calculates the relative reaction rates and relative contributions based on the R matrix
+input selected with Monte Carlo simuations. For the delta_tracer values, the script fits
+the tracer data from falkor_clean.csv file within each layer (defined in the script).
+Saves relative contributions as a text file for further plotting.
+
+Inputs:
+    :falkor_clean.csv: .csv file with cruise data and the following columns:
+        'Station'
+        'lon'
+        'lat'
+        'T'
+        'S'
+        'P'
+        'O2'
+        'sigma0'
+        'rho'
+        'DIC',
+        'DIP'
+        'NO3'
+        'NO2'
+        'NH4'
+    :R.txt: comma-delimited text file containing R matrix
+Outputs:
+    :layers.csv: 17x1 matrix, defining the sublayers along which we apply calculations.
+        Each row represents a density surface.
+    :reaction_matrix.csv: 6x5 matrix ("R matrix") containing a theoretical Δtracer:DIC for different reactions.
+        Each row represents a tracer (n=6), and each column represents a reaction (n=5).
+    :slopes_mean.csv: 16x6 matrix, where:
+        Each row represents a sublayer, bounded on each side by the density surfaces defined in "sublayers".
+        Each column represents a tracer.
+        Each cell is the measured slope of a given tracer against DIC in a given density layer.
+    :slopes_se.csv: same as slopes_mean.csv, but standard errors of slopes
+    :coeffs_mean.csv: 16x5 matrix where each row represents a sublayer and each column represents a process.
+        The values in each row are the mean values of the X matrix from a Monte Carlo simulation with 1000 iterations.
+    :coeffs_se.csv: same as coeffs_mean but standard errors of Monte Carlo simulation.
+    :relative_importances_mean.csv: 16x8 matrix, where:
+        Each row represents a sublayer, and is the mean of 1000 Monte Carlo iterations
+        Each column represents a reaction: anmx, denit, ox, red, nitox, dnrn, caco3, otherDIC
+    :relative_importances_se.csv: same as relative_importances_mean but with MC standard errors
+    :relative_importances_nitrite_mean.csv: 16x4 matrix, where:
+        Each row represents a sublayer, and is the mean of 1000 Monte Carlo iterations
+        Each column represents a reaction: anmx, denit, nitox, dnrn
+    :relative_importances_nitrite_mean.csv: same as relative_importances_nitrite_mean but with MC standard errors
+    :residuals.csv: 16x6 matrix containing (measured Δtracer:DIC) - (theoretical Δtracer:DIC)
+        Each row is a density layer;
+        Each column is a tracer: ΔNO3-, ΔNO2-, ΔNH4+, ΔN*, ΔTA, and ΔDIC
+    :percentage_residuals.csv: residuals as a percentage of the observed slopes
+"""
+
 ## Import Libraries
 import os
 import pandas as pd
@@ -7,7 +60,8 @@ import scipy.optimize as sc
 
 
 # Set Directory
-fpath = 'output/OM_variations/experimental/{}'
+fpath = 'output/OM_variations/experimental2/{}'
+#fpath = 'output/OM_variations/redfield/{}'
 
 # Import Data
 falkor = pd.read_csv('falkor_clean.csv')
@@ -113,14 +167,14 @@ residuals_perc = np.zeros((len(sublayers)-1,6))
 nstar_slope = np.zeros((K))
 
 # Calculate Coeffs, Relative Contributions, and Residuals
-for i in np.arange(0,len(sublayers)-1):
+for i in np.arange(0,len(sublayers)-1): # do Monte Carlo simulation for each layer
     # Run Monte Carlo
-    for k in range(K):
-        for j in range(6):
+    for k in range(K): # K is the number of iterations
+        for j in range(6): # pick a value for measured Δtracer:DIC based on normal distribution
             slope_iter[j] = np.random.normal(loc = slopes_mean[i,j],scale=slopes_se[i,j],size=1)
         # Calculate Coeffs
-        c_temp, rnorm = sc.nnls(R, slope_iter)
-        coeff_iter[k,:] = c_temp/np.sum(c_temp)
+        c_temp, rnorm = sc.nnls(R, slope_iter) # solve for Χ matrix
+        coeff_iter[k,:] = c_temp/np.sum(c_temp) # make sure X matrix sums to 1
 
         nstar_slope[k] = np.random.normal(loc = slopes_mean[i,4],scale=slopes_se[i,4],size=1)
         # Calculate Relative Importances 
@@ -140,7 +194,7 @@ for i in np.arange(0,len(sublayers)-1):
         relnit_iter[k,:] = [relnit_anmx_iter[k], relnit_denit_iter[k], relnit_nitox_iter[k], relnit_dnrn_iter[k]]
     
     # Save the Results
-    coeff_mean[i,:] = np.mean(coeff_iter, axis=0)
+    coeff_mean[i,:] = np.mean(coeff_iter, axis=0) # take the mean of the 1000 Monte Carlo iterations
     coeff_se[i,:] = np.std(coeff_iter, axis=0)#/math.sqrt(K)
     relimp_mean[i,:] = np.nanmean(relimp_iter, axis=0)
     relimp_se[i,:] = np.nanstd(relimp_iter, axis=0)#/math.sqrt(K)
