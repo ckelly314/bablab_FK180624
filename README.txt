@@ -11,7 +11,7 @@ Raw data can be found on the BCO-DMO repository: https://www.bco-dmo.org/dataset
 3. calc_reaction_stoi_and_R.py
     	Calculates and saves DNRN and denitrification reaction stoichiometric coefficients and R matrices for different organic matter compositions such as the estimate from FK180624 data, Redfield organic matter, Anderson organic matter, etc.
 
-4. calc_falkor_outputs.py
+4. calc_falkor_outputs_func.py
 	Calculates the relative reaction rates and relative contributions based on the R matrix input selected with Monte Carlo simuations. For the delta_tracer values, the script fits the tracer data from falkor_clean.csv file within each layer (defined in the script). Saves relative contributions as a text file for further plotting.
 
 5. pH_and_reactions.py 
