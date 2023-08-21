@@ -1,14 +1,14 @@
 """
-File: calc_falkor_outputs.py
+File: calc_f5906484_outputs.py
 ----------------------------
 
 Calculates the relative reaction rates and relative contributions based on the R matrix
 input selected with Monte Carlo simuations. For the delta_tracer values, the script fits
-the tracer data from falkor_clean.csv file within each layer (defined in the script).
+the tracer data from f5906484_clean.csv file within each layer (defined in the script).
 Saves relative contributions as a text file for further plotting.
 
 Inputs:
-    :falkor_clean.csv: .csv file with cruise data and the following columns:
+    :f5906484_clean.csv: .csv file with cruise data and the following columns:
         'Station'
         'lon'
         'lat'
@@ -57,38 +57,51 @@ import pandas as pd
 import numpy as np
 import statsmodels.api as sm
 import scipy.optimize as sc
+import matplotlib.pyplot as plt
+
+def quickplot(xvar, yvar, regressionparams, xlabel, ylabel, title):
+    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+    ax.scatter(xvar, yvar)
+    xfit = np.linspace(xvar.min(), xvar.max())
+    ax.plot(xfit, xfit * regressionparams[1] + regressionparams[0], color="k")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(title)
+    plt.tight_layout()
+    plt.show()
 
 
 # Set Directory
-fpath = "output/OM_variations/experimental2/{}"
-# fpath = 'output/OM_variations/redfield/{}'
+#fpath = "output/OM_variations/experimental2/{}"
+fpath = 'output/OM_variations/anderson/{}'
 
 # Import Data
-falkor = pd.read_csv("falkor_clean.csv")
+f5906484 = pd.read_csv("f5906484_clean.csv")
 R = np.loadtxt(fpath.format("R.txt"), delimiter=",")
+R = R[[0,1,4,5]] # remove rows for NH4 and Nstar
 
 # Define Inputs
 # stations = np.arange(1,15,1, dtype=float) # Stations selected for analysis
-stations = np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14))
+stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14))
 divider = 2  # Number of sublayers in each layer
 K = 10000  # Number of Iterations for Monte Carlo Error Propagation
 
 ### Data Preparation ###
 # Select Stations
-idx_station = np.where(np.isin(falkor["Station"], stations))
+idx_station = np.where(np.isin(f5906484["Station"], stations))
 
 # Save Data Vectors
-rho = np.array(falkor["rho"])[idx_station]  # kg/m3
-sigma0 = np.array(falkor["sigma0"])[idx_station]  # kg/m3
-DIC = np.array(falkor["DIC"])[idx_station]  # umol/kg
-DIP = np.array(falkor["DIP"])[idx_station]  # umol/kg
-NO2 = np.array(falkor["NO2"])[idx_station]  # umol/kg
-NO3 = np.array(falkor["NO3"])[idx_station]  # umol/kg
-NH4 = np.array(falkor["NH4"])[idx_station]  # umol/kg
-Nstar = np.array(falkor["Nstar"])[idx_station]  # umol/kg
-TA = np.array(falkor["TA"])[idx_station]  # umol/kg
-pH = np.array(falkor["pH"])[idx_station]
-O2 = np.array(falkor["O2"])[idx_station]  # umol/kg
+rho = np.array(f5906484["rho"])[idx_station]  # kg/m3
+sigma0 = np.array(f5906484["sigma0"])[idx_station]  # kg/m3
+DIC = np.array(f5906484["DIC"])[idx_station]  # umol/kg
+#DIP = np.array(f5906484["DIP"])[idx_station]  # umol/kg
+NO2 = np.array(f5906484["NO2"])[idx_station]  # umol/kg
+NO3 = np.array(f5906484["NO3"])[idx_station]  # umol/kg
+#NH4 = np.array(f5906484["NH4"])[idx_station]  # umol/kg
+#Nstar = np.array(f5906484["Nstar"])[idx_station]  # umol/kg
+TA = np.array(f5906484["TA"])[idx_station]  # umol/kg
+pH = np.array(f5906484["pH"])[idx_station]
+O2 = np.array(f5906484["O2"])[idx_station]  # umol/kg
 
 # Define Layers
 layers = np.array(
@@ -103,8 +116,8 @@ sublayers = np.unique(sl)
 # Create Results Arrays
 fitting_NO3 = np.zeros((len(sublayers) - 1, 4))
 fitting_NO2 = np.zeros((len(sublayers) - 1, 4))
-fitting_NH4 = np.zeros((len(sublayers) - 1, 4))
-fitting_Nstar = np.zeros((len(sublayers) - 1, 4))
+#fitting_NH4 = np.zeros((len(sublayers) - 1, 4))
+#fitting_Nstar = np.zeros((len(sublayers) - 1, 4))
 fitting_TA = np.zeros((len(sublayers) - 1, 4))
 fitting_DIC = np.zeros((len(sublayers) - 1, 4))
 
@@ -118,8 +131,8 @@ for i in np.arange(0, len(sublayers) - 1):
     xx = sm.add_constant(DIC[idx_layer])
     rf_NO3 = sm.RLM(NO3[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_NO2 = sm.RLM(NO2[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
-    rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
-    rf_Nstar = sm.RLM(Nstar[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
+    #rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
+    #rf_Nstar = sm.RLM(Nstar[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_TA = sm.RLM(TA[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_DIC = sm.RLM(DIC[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
 
@@ -130,12 +143,12 @@ for i in np.arange(0, len(sublayers) - 1):
     fitting_NO2[i, :] = np.array(
         [rf_NO2.params[1], rf_NO2.bse[1], rf_NO2.params[0], rf_NO2.bse[0]]
     )
-    fitting_NH4[i, :] = np.array(
-        [rf_NH4.params[1], rf_NH4.bse[1], rf_NH4.params[0], rf_NH4.bse[0]]
-    )
-    fitting_Nstar[i, :] = np.array(
-        [rf_Nstar.params[1], rf_Nstar.bse[1], rf_Nstar.params[0], rf_Nstar.bse[0]]
-    )
+    #fitting_NH4[i, :] = np.array(
+    #    [rf_NH4.params[1], rf_NH4.bse[1], rf_NH4.params[0], rf_NH4.bse[0]]
+    #)
+    #fitting_Nstar[i, :] = np.array(
+    #    [rf_Nstar.params[1], rf_Nstar.bse[1], rf_Nstar.params[0], rf_Nstar.bse[0]]
+    #)
     fitting_TA[i, :] = np.array(
         [rf_TA.params[1], rf_TA.bse[1], rf_TA.params[0], rf_TA.bse[0]]
     )
@@ -143,14 +156,18 @@ for i in np.arange(0, len(sublayers) - 1):
         [rf_DIC.params[1], rf_DIC.bse[1], rf_DIC.params[0], rf_DIC.bse[0]]
     )
 
+    quickplot(DIC[idx_layer], NO3[idx_layer], rf_NO3.params, 
+        "[DIC]", "[NO3-]", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+
+
 
 # Save Slopes
 slopes_mean = np.array(
     [
         fitting_NO3[:, 0].T,
         fitting_NO2[:, 0].T,
-        fitting_NH4[:, 0].T,
-        fitting_Nstar[:, 0].T,
+        #fitting_NH4[:, 0].T,
+        #fitting_Nstar[:, 0].T,
         fitting_TA[:, 0].T,
         fitting_DIC[:, 0].T,
     ]
@@ -159,8 +176,8 @@ slopes_se = np.array(
     [
         fitting_NO3[:, 1],
         fitting_NO2[:, 1],
-        fitting_NH4[:, 1],
-        fitting_Nstar[:, 1],
+        #fitting_NH4[:, 1],
+        #fitting_Nstar[:, 1],
         fitting_TA[:, 1],
         fitting_DIC[:, 1],
     ]
@@ -168,7 +185,7 @@ slopes_se = np.array(
 
 ### Reaction Coefficient, Relative Contributions, and Residuals Calculations with Monte Carlo Error Propagation ###
 # Create Results Arrays
-slope_iter = np.zeros((6))
+slope_iter = np.zeros((slopes_mean.shape[1]))
 coeff_iter = np.zeros((K, 5))
 coeff_mean = np.zeros((len(sublayers) - 1, 5))
 coeff_se = np.zeros((len(sublayers) - 1, 5))
@@ -191,10 +208,10 @@ relnit_denit_iter = np.zeros((K))
 relnit_nitox_iter = np.zeros((K))
 relnit_dnrn_iter = np.zeros((K))
 relnit_iter = np.zeros((K, 4))
-slopes_obs = np.zeros((len(sublayers) - 1, 6))
-slopes_est = np.zeros((len(sublayers) - 1, 6))
-residuals = np.zeros((len(sublayers) - 1, 6))
-residuals_perc = np.zeros((len(sublayers) - 1, 6))
+slopes_obs = np.zeros((len(sublayers) - 1, slopes_mean.shape[1]))
+slopes_est = np.zeros((len(sublayers) - 1, slopes_mean.shape[1]))
+residuals = np.zeros((len(sublayers) - 1, slopes_mean.shape[1]))
+residuals_perc = np.zeros((len(sublayers) - 1, slopes_mean.shape[1]))
 nstar_slope = np.zeros((K))
 
 # Calculate Coeffs, Relative Contributions, and Residuals
@@ -202,20 +219,20 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
     # Run Monte Carlo
     for k in range(K):  # K is the number of iterations
         for j in range(
-            6
+            slopes_mean.shape[1]
         ):  # pick a value for measured Δtracer:DIC based on normal distribution
             slope_iter[j] = np.random.normal(
                 loc=slopes_mean[i, j], scale=slopes_se[i, j], size=1
             )
         # Calculate Coeffs
         c_temp, rnorm = sc.nnls(R, slope_iter)  # solve for Χ matrix
-        print(c_temp)
         coeff_iter[k, :] = c_temp / np.sum(c_temp)  # make sure X matrix sums to 1
 
-        nstar_slope[k] = np.random.normal(
-            loc=slopes_mean[i, 4], scale=slopes_se[i, 4], size=1
-        )
+        #nstar_slope[k] = np.random.normal(
+        #   loc=slopes_mean[i, 4], scale=slopes_se[i, 4], size=1
+        #)
         # Calculate Relative Importances
+        '''
         anmx_iter[k] = (
             (R[3, 2] * c_temp[2]) / (R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) * 100
         )
@@ -404,3 +421,4 @@ np.savetxt(
 )
 np.savetxt(fpath.format("layers.csv"), sublayers, delimiter=",", header="Layers")
 print("done")
+'''
