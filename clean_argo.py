@@ -46,7 +46,10 @@ import PyCO2SYS as pyco2
 
 # Import Parameters and Results
 # need to add na_values so that pyco2sys doesn't try to solve carbonate system with TA=-999
-f5906484 = pd.read_csv("5906484qcno2.txt",skiprows = 70, sep='\t')
+f5906484 = pd.read_csv("5906484qcno2.txt",skiprows = 70, sep='\t',
+    parse_dates = ['mon/day/yr'])
+# add 'month' column so we can match gridded WOA data
+f5906484['month'] = f5906484['mon/day/yr'].dt.strftime('%m')
 # need to rename columns from BCO-DMO file to match cols in clean_f5906484.py
 cols = {
     'Station': "station",
