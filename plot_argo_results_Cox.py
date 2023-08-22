@@ -17,10 +17,10 @@ fs = 13
 ff = "arial"
 
 # stations = np.arange(1,15,1, dtype=float)
-stations = np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19))
+stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19))
 
 # Import Parameters and Results
-falkor = pd.read_csv("falkor_clean.csv")
+f5906484 = pd.read_csv("f5906484_clean.csv")
 coeffs_mean = np.array(pd.read_csv(data_path.format("coeffs_mean.csv")))
 coeffs_se = np.array(pd.read_csv(data_path.format("coeffs_se.csv")))
 slopes_mean = np.array(pd.read_csv(data_path.format("slopes_mean.csv")))
@@ -58,7 +58,7 @@ hm = sns.heatmap(
     vmax=1,
     linewidths=0.5,
 )
-hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
 hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     ["DNRN", "Denitrification", "Anammox", "Nitrite Oxidation", "$CaCO_3$ Dissolution"],
@@ -78,7 +78,7 @@ hm = sns.heatmap(
     vmax=0.1,
     linewidths=0.5,
 )
-hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
 hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     ["DNRN", "Denitrification", "Anammox", "Nitrite Oxidation", "$CaCO_3$ Dissolution"],
@@ -90,6 +90,7 @@ fig1.tight_layout(pad=2.5)
 plt.savefig(
     fig_path.format("reaction_coefficients.{}".format(fig_format))
 )  # , dpi = dpi)
+plt.show()
 
 # Residuals  Heat Maps
 fig2, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 5))
@@ -104,7 +105,7 @@ hm = sns.heatmap(
     vmax=0.10,
     linewidths=0.5,
 )
-hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
 hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     [
@@ -129,7 +130,7 @@ hm = sns.heatmap(
     vmax=100,
     linewidths=0.5,
 )
-hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
 hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     [
@@ -144,6 +145,7 @@ hm.set_xticklabels(
 hm.set_title("Percentage Residuals")
 fig2.tight_layout(pad=2.5)
 plt.savefig(fig_path.format("residuals.{}".format(fig_format)), dpi=dpi)
+plt.show()
 
 # Relative Contributions
 new2_dnrn = relimp_nit[:, 3] / (relimp_nit[:, 1] + relimp_nit[:, 3]) * 100
@@ -193,14 +195,14 @@ ax1.barh(
 )
 xx = np.linspace(0, 110, 10)
 yy = np.ones(np.shape(xx))
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = relimp_mean[i, 0] * np.ones(np.shape(yy1))
     ax1.plot(xx1, yy1, color="black", linewidth=1.0)
 ax1.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax1.set(xlim=(0, 105))
-ax1.set_yticks(ticks=np.arange(1, 17))
-ax1.set_yticklabels(labels=ylab, size=16)
+ax1.set_yticks(ticks=np.arange(1, len(layers)))
+ax1.set_yticklabels(labels=ylab, size=len(layers) - 1)
 ax1.tick_params(axis="x", labelsize=fs + 3)
 ax1.tick_params(axis="y", labelsize=fs + 3)
 ax1.axes.xaxis.set_ticklabels([])
@@ -221,14 +223,14 @@ ax2.barh(
     label="Nitrite Reduction",
     color="wheat",
 )
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = relimp_mean[i, 2] * np.ones(np.shape(yy1))
     ax2.plot(xx1, yy1, color="black", linewidth=1.0)
 ax2.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax2.set(xlim=(0, 105))
-ax2.set_yticks(ticks=np.arange(1, 17))
-ax2.set_yticklabels(labels=ylab, size=16)
+ax2.set_yticks(ticks=np.arange(1, len(layers)))
+ax2.set_yticklabels(labels=ylab, size=len(layers) - 1)
 ax2.tick_params(axis="x", labelsize=fs + 3)
 ax2.tick_params(axis="y", labelsize=fs + 3)
 ax2.axes.xaxis.set_ticklabels([])
@@ -250,15 +252,15 @@ ax3.barh(
     label="Nitrite Oxidation",
     color="wheat",
 )
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = relimp_mean[i, 5] * np.ones(np.shape(yy1))
     ax3.plot(xx1, yy1, color="black", linewidth=1.0)
 ax3.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax3.set(xlim=(0, 105))
 ax3.set_xlabel("Relative Contribution %", fontsize=fs + 3)
-ax3.set_yticks(ticks=np.arange(1, 17))
-ax3.set_yticklabels(labels=ylab, size=16)
+ax3.set_yticks(ticks=np.arange(1, len(layers)))
+ax3.set_yticklabels(labels=ylab, size=len(layers) - 1)
 ax3.tick_params(axis="x", labelsize=fs + 3)
 ax3.tick_params(axis="y", labelsize=fs + 3)
 ax3.legend(loc=3, fontsize=13)
@@ -278,15 +280,15 @@ ax4.barh(
     label="$CaCO_3$ Dissolution",
     color="wheat",
 )
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = relimp_mean[i, 7] * np.ones(np.shape(yy1))
     ax4.plot(xx1, yy1, color="black", linewidth=1.0)
 ax4.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax4.set(xlim=(0, 105))
 ax4.set_xlabel("Relative Contribution %", fontsize=fs + 3)
-ax4.set_yticks(ticks=np.arange(1, 17))
-ax4.set_yticklabels(labels=ylab, size=16)
+ax4.set_yticks(ticks=np.arange(1, len(layers)))
+ax4.set_yticklabels(labels=ylab, size=len(layers)-1)
 ax4.tick_params(axis="x", labelsize=fs + 3)
 ax4.tick_params(axis="y", labelsize=fs + 3)
 ax4.axes.yaxis.set_ticklabels([])
@@ -307,14 +309,14 @@ ax5.barh(
     label="Denitrification",
     color="wheat",
 )
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = new2_dnrn[i] * np.ones(np.shape(yy1))
     ax5.plot(xx1, yy1, color="black", linewidth=1.0)
 ax5.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax5.set(xlim=(0, 105))
-ax5.set_yticks(ticks=np.arange(1, 17))
-ax5.set_yticklabels(labels=ylab, size=16)
+ax5.set_yticks(ticks=np.arange(1, len(layers)))
+ax5.set_yticklabels(labels=ylab, size=len(layers)-1)
 ax5.legend(loc=3, fontsize=13)
 ax5.tick_params(axis="x", labelsize=fs + 3)
 ax5.tick_params(axis="y", labelsize=fs + 3)
@@ -336,16 +338,16 @@ ax6.barh(
     label="Nitrite Consumption",
     color="wheat",
 )
-for i in np.arange(0, 16):
+for i in np.arange(0, len(layers) - 1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
     xx1 = new3_prod[i] * np.ones(np.shape(yy1))
     ax6.plot(xx1, yy1, color="black", linewidth=1.0)
 ax6.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax6.set(xlim=(0, 105))
 ax6.set_xlabel("Relative Contribution %", fontsize=fs + 3)
-ax6.set_yticks(ticks=np.arange(1, 17))
+ax6.set_yticks(ticks=np.arange(1, len(layers)))
 ax6.invert_yaxis()
-ax6.set_yticklabels(labels=ylab, size=16)
+ax6.set_yticklabels(labels=ylab, size=len(layers) - 1)
 ax6.tick_params(axis="x", labelsize=fs + 3)
 ax6.tick_params(axis="y", labelsize=fs + 3)
 ax6.axes.yaxis.set_ticklabels([])
@@ -354,3 +356,4 @@ ax6.legend(loc=3, fontsize=13)
 
 fig3.tight_layout(pad=2.5)
 plt.savefig(fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi)
+plt.show()

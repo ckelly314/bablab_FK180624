@@ -43,19 +43,82 @@ import pandas as pd
 import numpy as np
 import gsw
 import PyCO2SYS as pyco2
+import xarray as xr
+
+def round_off(series):
+    return round(series * 2) / 2
+
+def customround(series, base=5):
+    return base * round(series/base)
+
+f5906484 = pd.read_csv("5906484qcno2.txt",skiprows = 70, sep='\t',
+    parse_dates = ['mon/day/yr'], na_values = [-10000000000.0])
+# add 'month' column so we can match gridded WOA data
+f5906484['month'] = f5906484['mon/day/yr'].dt.strftime('%m')
+f5906484['month'] = f5906484['month'].astype(int)
+f5906484 =  f5906484[ f5906484['Nitrite[µmol/kg]'] > 0]
+
+data = f5906484
+
+data['depth'] = customround(data['Depth[m]'])
+data['lon'] = round(data['Lon [°E]']) + 0.5 #round_off(data['Lon [°E]'])
+data['lon'] = data['lon'] - 360.0
+data['lat'] = round(data['Lat [°N]']) + 0.5 #round_off(data['Lat [°N]'])
+
+
+def process_WOA(month):
+    if i<10:
+        link = f'https://www.ncei.noaa.gov/thredds-ocean/dodsC/ncei/woa/phosphate/all/1.00/woa18_all_p0{month}_01.nc'
+    elif i>=10:
+        link = f'https://www.ncei.noaa.gov/thredds-ocean/dodsC/ncei/woa/phosphate/all/1.00/woa18_all_p{month}_01.nc'
+    ds = xr.open_dataset(link, decode_times = False)
+    ds = ds.sel(lat = slice(16,19),lon = slice(-110, -106))
+    df = ds.to_dataframe(dim_order = ['lat', 'nbounds', 'lon', 'depth', 'time'])
+    df = df.reset_index().set_index('depth')
+    indexdf = pd.DataFrame(np.arange(0,805,5), columns = ['depth']).set_index('depth')
+    monthlydf = pd.DataFrame([])
+    for lat in df.lat.drop_duplicates():
+        for lon in df.lon.drop_duplicates():
+            subset = df[(df.lat == lat) & (df.lon ==lon)]
+            temp = indexdf.join(subset)
+            temp = temp.ffill(axis=0)
+            temp['lat'] = lat
+            temp['lon'] = lon
+            monthlydf = pd.concat([monthlydf, temp])
+    monthlydf = monthlydf.reset_index()
+    monthlydf = monthlydf[['lat','lon','depth','p_an']].groupby(['lat','lon','depth']).mean()
+    monthlydf['month'] = month
+    return monthlydf
+
+data = data.set_index(['month','lat','lon','depth'])
+
+WOA = pd.DataFrame()
+
+for i in range(1,13):
+    print(i)
+    monthlyWOA = process_WOA(i)
+    WOA = pd.concat([WOA, monthlyWOA])
+
+WOA = WOA.reset_index()
+WOA = WOA.set_index(['month','lat','lon','depth'])
+
+data = data.join(WOA)
+print(data['p_an'].head())
+
+f5906484 = data.reset_index()
 
 # Import Parameters and Results
 # need to add na_values so that pyco2sys doesn't try to solve carbonate system with TA=-999
-f5906484 = pd.read_csv("5906484qcno2.txt",skiprows = 70, sep='\t',
-    parse_dates = ['mon/day/yr'])
+#f5906484 = pd.read_csv("5906484qcno2.txt",skiprows = 70, sep='\t',
+#    parse_dates = ['mon/day/yr'])
 # add 'month' column so we can match gridded WOA data
-f5906484['month'] = f5906484['mon/day/yr'].dt.strftime('%m')
+#f5906484['month'] = f5906484['mon/day/yr'].dt.strftime('%m')
 # need to rename columns from BCO-DMO file to match cols in clean_f5906484.py
 cols = {
     'Station': "station",
     #"CASTNO": "cast",
-    'Lat [°N]': "lat",
-    'Lon [°E]': "lon",
+    #'Lat [°N]': "lat",
+    #'Lon [°E]': "lon",
     'Pressure[dbar]': "press",
     'Temperature[°C]': "temperature",
     'Salinity[pss]': "sal",
@@ -66,7 +129,7 @@ cols = {
     'QF.8':'NO3_flag',
     'Nitrite[µmol/kg]': "NO2",
     'QF.17': "NO2_flag",
-    #"PHSPHT": "phosphate",
+    'p_an': "phosphate",
     #"PHSPHT_FLAG_W": "phosphate_flag",
     #"NH4_FLAG_W": "NH4_flag",
     'pHinsitu[Total]': "pH_insitu",
@@ -77,7 +140,7 @@ cols = {
     'QF.15':'DIC_flag'
 }
 f5906484 = f5906484.rename(columns=cols)
-f5906484 = f5906484.dropna()
+#f5906484 = f5906484.dropna()
 
 # Select Flagged Bad Data
 
@@ -123,17 +186,19 @@ f5906484["pH_insitu"] = Z["pH_out"]
 '''
 
 # Remove Bad Data and Save New Vectors
+depth = np.array(f5906484['Depth[m]'])[idx_flag]  # degrees C
+date = np.array(f5906484['mon/day/yr'])[idx_flag]
 T = np.array(f5906484["temperature"])[idx_flag]  # degrees C
 S = np.array(f5906484["sal"])[idx_flag]  # psu
 P = np.array(f5906484["press"])[idx_flag]  # dbar
 rho = np.array(f5906484["rho"])[idx_flag]  # kg/m3
 sigma0 = np.array(f5906484["sigma0"])[idx_flag]  # kg/m3 #
 DIC = np.array(f5906484["DIC"])[idx_flag]  # umol/kg
-#DIP = np.array(f5906484["phosphate"])[idx_flag] / rho * 1000  # umol/kg
+DIP = np.array(f5906484["phosphate"])[idx_flag] / rho * 1000  # umol/kg
 NO2 = np.array(f5906484["NO2"])[idx_flag] / rho * 1000  # umol/kg
 NO3 = np.array(f5906484["NO3"])[idx_flag] / rho * 1000  # umol/kg
 #NH4 = np.array(f5906484["NH4"])[idx_flag] / rho * 1000  # umol/kg
-#Nstar = ((NO2 + NO3) - 16 * DIP + 2.9)  # umol/kg  ## Change the DIP coefficient (either 11.4 or 16) for sensitivity analyses.
+Nstar = ((NO2 + NO3) - 16 * DIP + 2.9)  # umol/kg  ## Change the DIP coefficient (either 11.4 or 16) for sensitivity analyses.
 TA = np.array(f5906484["TA"])[idx_flag]  # umol/kg
 pH = np.array(f5906484["pH_insitu"])[idx_flag]
 O2 = np.array(f5906484["O2"])[idx_flag]  # umol/kg
@@ -146,6 +211,8 @@ lon = np.array(f5906484["lon"])[idx_flag]
 #fluor = np.array(f5906484["fluor"])[idx_flag]
 f5906484_df_data = np.array(
     [
+        depth,
+        date,
         station,
         #cast,
         lat,
@@ -156,11 +223,11 @@ f5906484_df_data = np.array(
         rho,
         sigma0,
         DIC,
-        #DIP,
+        DIP,
         NO3,
         NO2,
         #NH4,
-        #Nstar,
+        Nstar,
         TA,
         pH,
         #pH_tot,
@@ -172,6 +239,8 @@ f5906484_df_data = np.array(
 f5906484_clean = pd.DataFrame(
     data=f5906484_df_data,
     columns=[
+        "Depth",
+        "Date",
         "Station",
         #"cast",
         "lat",
@@ -182,11 +251,11 @@ f5906484_clean = pd.DataFrame(
         "rho",
         "sigma0",
         "DIC",
-        #"DIP",
+        "DIP",
         "NO3",
         "NO2",
         #"NH4",
-        #"Nstar",
+        "Nstar",
         "TA",
         "pH",
         #"pH_tot",

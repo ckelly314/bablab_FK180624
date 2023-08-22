@@ -77,13 +77,14 @@ fpath = 'output/OM_variations/anderson/{}'
 
 # Import Data
 f5906484 = pd.read_csv("f5906484_clean.csv")
+f5906484 = f5906484.dropna()
 R = np.loadtxt(fpath.format("R.txt"), delimiter=",")
-R = R[[0,1,4,5]] # remove rows for NH4 and Nstar
+Rsolve = R[[0,1,3,4,5]] # remove rows for NH4 and Nstar
 
 # Define Inputs
 # stations = np.arange(1,15,1, dtype=float) # Stations selected for analysis
 stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14))
-divider = 2  # Number of sublayers in each layer
+divider = 1#2  # Number of sublayers in each layer
 K = 10000  # Number of Iterations for Monte Carlo Error Propagation
 
 ### Data Preparation ###
@@ -94,18 +95,19 @@ idx_station = np.where(np.isin(f5906484["Station"], stations))
 rho = np.array(f5906484["rho"])[idx_station]  # kg/m3
 sigma0 = np.array(f5906484["sigma0"])[idx_station]  # kg/m3
 DIC = np.array(f5906484["DIC"])[idx_station]  # umol/kg
-#DIP = np.array(f5906484["DIP"])[idx_station]  # umol/kg
+DIP = np.array(f5906484["DIP"])[idx_station]  # umol/kg
 NO2 = np.array(f5906484["NO2"])[idx_station]  # umol/kg
 NO3 = np.array(f5906484["NO3"])[idx_station]  # umol/kg
 #NH4 = np.array(f5906484["NH4"])[idx_station]  # umol/kg
-#Nstar = np.array(f5906484["Nstar"])[idx_station]  # umol/kg
+Nstar = np.array(f5906484["Nstar"])[idx_station]  # umol/kg
 TA = np.array(f5906484["TA"])[idx_station]  # umol/kg
 pH = np.array(f5906484["pH"])[idx_station]
 O2 = np.array(f5906484["O2"])[idx_station]  # umol/kg
 
 # Define Layers
 layers = np.array(
-    [25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
+    #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
+    [25.5, 26, 26.5, 27.3], dtype=float
 )  # in sigma0
 sl = np.zeros((len(layers) - 1, divider + 1))
 for i in np.arange(0, len(layers) - 1):
@@ -117,7 +119,7 @@ sublayers = np.unique(sl)
 fitting_NO3 = np.zeros((len(sublayers) - 1, 4))
 fitting_NO2 = np.zeros((len(sublayers) - 1, 4))
 #fitting_NH4 = np.zeros((len(sublayers) - 1, 4))
-#fitting_Nstar = np.zeros((len(sublayers) - 1, 4))
+fitting_Nstar = np.zeros((len(sublayers) - 1, 4))
 fitting_TA = np.zeros((len(sublayers) - 1, 4))
 fitting_DIC = np.zeros((len(sublayers) - 1, 4))
 
@@ -125,14 +127,14 @@ fitting_DIC = np.zeros((len(sublayers) - 1, 4))
 for i in np.arange(0, len(sublayers) - 1):
     lower_boundary = sublayers[i]
     upper_boundary = sublayers[i + 1]
-    idx_layer = np.where((sigma0 > lower_boundary) & (sigma0 < upper_boundary))
+    idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary))
 
     # Robust Regression
     xx = sm.add_constant(DIC[idx_layer])
     rf_NO3 = sm.RLM(NO3[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_NO2 = sm.RLM(NO2[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     #rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
-    #rf_Nstar = sm.RLM(Nstar[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
+    rf_Nstar = sm.RLM(Nstar[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_TA = sm.RLM(TA[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
     rf_DIC = sm.RLM(DIC[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
 
@@ -146,9 +148,9 @@ for i in np.arange(0, len(sublayers) - 1):
     #fitting_NH4[i, :] = np.array(
     #    [rf_NH4.params[1], rf_NH4.bse[1], rf_NH4.params[0], rf_NH4.bse[0]]
     #)
-    #fitting_Nstar[i, :] = np.array(
-    #    [rf_Nstar.params[1], rf_Nstar.bse[1], rf_Nstar.params[0], rf_Nstar.bse[0]]
-    #)
+    fitting_Nstar[i, :] = np.array(
+        [rf_Nstar.params[1], rf_Nstar.bse[1], rf_Nstar.params[0], rf_Nstar.bse[0]]
+    )
     fitting_TA[i, :] = np.array(
         [rf_TA.params[1], rf_TA.bse[1], rf_TA.params[0], rf_TA.bse[0]]
     )
@@ -157,8 +159,15 @@ for i in np.arange(0, len(sublayers) - 1):
     )
 
     quickplot(DIC[idx_layer], NO3[idx_layer], rf_NO3.params, 
-        "[DIC]", "[NO3-]", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
-
+        "[DIC]", "$[NO_3^-]$", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+    quickplot(DIC[idx_layer], NO2[idx_layer], rf_NO2.params, 
+        "[DIC]", "$[NO_2^-]$", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+    quickplot(DIC[idx_layer], Nstar[idx_layer], rf_Nstar.params, 
+        "[DIC]", "N*", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+    quickplot(DIC[idx_layer], TA[idx_layer], rf_TA.params, 
+        "[DIC]", "TA", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+    quickplot(DIC[idx_layer], DIC[idx_layer], rf_DIC.params, 
+        "[DIC]", "[DIC]", fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
 
 
 # Save Slopes
@@ -167,7 +176,7 @@ slopes_mean = np.array(
         fitting_NO3[:, 0].T,
         fitting_NO2[:, 0].T,
         #fitting_NH4[:, 0].T,
-        #fitting_Nstar[:, 0].T,
+        fitting_Nstar[:, 0].T,
         fitting_TA[:, 0].T,
         fitting_DIC[:, 0].T,
     ]
@@ -177,7 +186,7 @@ slopes_se = np.array(
         fitting_NO3[:, 1],
         fitting_NO2[:, 1],
         #fitting_NH4[:, 1],
-        #fitting_Nstar[:, 1],
+        fitting_Nstar[:, 1],
         fitting_TA[:, 1],
         fitting_DIC[:, 1],
     ]
@@ -225,20 +234,30 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
                 loc=slopes_mean[i, j], scale=slopes_se[i, j], size=1
             )
         # Calculate Coeffs
-        c_temp, rnorm = sc.nnls(R, slope_iter)  # solve for Χ matrix
+        # nnls = "non-negatcie"
+        # we use nnls instead of np.linalg.solve because we don't want any negative numbers
+        c_temp, rnorm = sc.nnls(Rsolve, slope_iter)  # solve for Χ matrix
         coeff_iter[k, :] = c_temp / np.sum(c_temp)  # make sure X matrix sums to 1
 
-        #nstar_slope[k] = np.random.normal(
-        #   loc=slopes_mean[i, 4], scale=slopes_se[i, 4], size=1
-        #)
+        nstar_slope[k] = np.random.normal(
+           loc=slopes_mean[i, 4], scale=slopes_se[i, 4], size=1
+        )
         # Calculate Relative Importances
-        '''
-        anmx_iter[k] = (
-            (R[3, 2] * c_temp[2]) / (R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) * 100
-        )
-        denit_iter[k] = (
-            (R[3, 1] * c_temp[1]) / (R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) * 100
-        )
+
+        if abs(R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) != 0:
+            anmx_iter[k] = (
+                (R[3, 2] * c_temp[2]) / (R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) * 100
+            )
+        else:
+            anmx_iter[k] = 0
+        
+        if abs(R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) != 0:
+            denit_iter[k] = (
+                (R[3, 1] * c_temp[1]) / (R[3, 2] * c_temp[2] + R[3, 1] * c_temp[1]) * 100
+            )
+        else:
+            denit_iter[k]
+
         ox_iter[k] = (
             (R[1, 3] * c_temp[3] - R[0, 2] * c_temp[2])
             / (
@@ -348,7 +367,7 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
 
     # Calculate Residuals
     slopes_obs[i, :] = slopes_mean[i, :].T
-    slopes_est[i, :] = np.dot(R, coeff_mean[i, :])
+    slopes_est[i, :] = np.dot(Rsolve, coeff_mean[i, :])
     residuals[i, :] = slopes_obs[i, :] - slopes_est[i, :]
     residuals_perc[i, :] = abs(residuals[i, :]) / abs(slopes_obs[i, :]) * 100
 
@@ -421,4 +440,4 @@ np.savetxt(
 )
 np.savetxt(fpath.format("layers.csv"), sublayers, delimiter=",", header="Layers")
 print("done")
-'''
+

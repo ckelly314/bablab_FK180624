@@ -35,11 +35,11 @@ def process_WOA(month):
 	data['month'] = month
 	return data
 
-#jan = xr.open_dataset("https://www.ncei.noaa.gov/thredds-ocean/dodsC/ncei/woa/phosphate/all/1.00/woa18_all_p01_01.nc", decode_times = False)
-#jan = jan.sel(lat = slice(16,19),lon = slice(-110, -106))
-#jan = jan.to_dataframe(dim_order = ['lat', 'nbounds', 'lon', 'depth', 'time'])
-#jan = jan.reset_index()
-#jan['month'] = 1
+jan = xr.open_dataset("https://www.ncei.noaa.gov/thredds-ocean/dodsC/ncei/woa/phosphate/all/1.00/woa18_all_p01_01.nc", decode_times = False)
+jan = jan.sel(lat = slice(16,19),lon = slice(-110, -106))
+jan = jan.to_dataframe(dim_order = ['lat', 'nbounds', 'lon', 'depth', 'time'])
+jan = jan.reset_index()
+jan['month'] = 1
 #jan = jan[['lat','lon','depth','p_an']].groupby(['lat','lon','depth']).mean()
 
 data = data.set_index(['month','lat','lon','depth'])
