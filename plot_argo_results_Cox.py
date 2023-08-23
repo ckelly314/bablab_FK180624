@@ -7,10 +7,43 @@ import seaborn as sns
 import scipy as sc
 import statsmodels.api as sm
 
+
+### USER INPUTS ###
+# stations = np.arange(1,15,1, dtype=float) # Stations selected for analysis
+#stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14))
+# Define Layers
+#layers = np.array(
+#    #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
+#    [25.5, 26, 27.3], dtype=float
+#)  # in sigma0
+
+chunkID = 5
+if chunkID == 1:
+    stations = np.arange(1,21)
+    # Define Layers
+    layers = np.array([25.5, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+elif chunkID == 2:
+    stations = np.arange(21,40)
+    # Define Layers
+    layers = np.array([25.1, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+elif chunkID == 3:
+    stations = np.arange(40,44)
+    # Define Layers
+    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+elif chunkID == 4:
+    stations = np.arange(44,48)
+    # Define Layers
+    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+elif chunkID == 5:
+    stations = np.arange(48,57)
+    # Define Layers
+    layers = np.array([25.99, 26.55,27.4], dtype=float)  # in sigma0
+###################
+
 # Set Directory
 file_path = "OM_variations/anderson/{}"
-data_path = "output/{}".format(file_path)
-fig_path = "figures/{}"  # .format(file_path)
+data_path = f"output/chunk{chunkID}/" #"output/{}".format(file_path)
+fig_path = f"figures/chunk{chunkID}"  # .format(file_path)
 fig_format = "pdf"
 dpi = 500
 fs = 13
@@ -21,21 +54,38 @@ stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14
 
 # Import Parameters and Results
 f5906484 = pd.read_csv("f5906484_clean.csv")
-coeffs_mean = np.array(pd.read_csv(data_path.format("coeffs_mean.csv")))
-coeffs_se = np.array(pd.read_csv(data_path.format("coeffs_se.csv")))
-slopes_mean = np.array(pd.read_csv(data_path.format("slopes_mean.csv")))
-slopes_se = np.array(pd.read_csv(data_path.format("slopes_se.csv")))
-residuals_perc = np.array(pd.read_csv(data_path.format("percentage_residuals.csv")))
-residuals = np.array(pd.read_csv(data_path.format("residuals.csv")))
-relimp_mean = np.array(pd.read_csv(data_path.format("relative_importances_mean.csv")))
-relimp_se = np.array(pd.read_csv(data_path.format("relative_importances_se.csv"))) * 1.0
-relimp_nit = np.array(
-    pd.read_csv(data_path.format("relative_importances_nitrite_mean.csv"))
+coeffs_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/coeffs_mean.csv")
+    #data_path.format("coeffs_mean.csv"))
 )
-relimp_nit_se = (
-    np.array(pd.read_csv(data_path.format("relative_importances_nitrite_se.csv"))) * 1.0
+coeffs_se = np.array(pd.read_csv(f"output/chunk{chunkID}/coeffs_se.csv")
+    #data_path.format("coeffs_se.csv"))
 )
-layers = np.array(pd.read_csv(data_path.format("layers.csv")))
+slopes_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_mean.csv")
+    #data_path.format("slopes_mean.csv"))
+)
+slopes_se = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_se.csv")
+    #data_path.format("slopes_se.csv"))
+)
+residuals_perc = np.array(pd.read_csv(f"output/chunk{chunkID}/percentage_residuals.csv")
+    #data_path.format("percentage_residuals.csv"))
+)
+residuals = np.array(pd.read_csv(f"output/chunk{chunkID}/residuals.csv")
+    #data_path.format("residuals.csv"))
+)
+relimp_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/relative_importances_mean.csv")
+    #data_path.format("relative_importances_mean.csv"))
+)
+relimp_se = np.array(pd.read_csv(f"output/chunk{chunkID}/relative_importances_se.csv")
+    #data_path.format("relative_importances_se.csv"))
+    ) * 1.0
+relimp_nit = np.array(pd.read_csv(f"output/chunk{chunkID}/relative_importances_nitrite_mean.csv")
+        #data_path.format("relative_importances_nitrite_mean.csv"))
+)
+relimp_nit_se = (np.array(pd.read_csv(f"output/chunk{chunkID}/relative_importances_nitrite_se.csv")))* 1.0
+        #data_path.format("relative_importances_nitrite_se.csv"))) * 1.0
+#layers = np.array(pd.read_csv(f"output/chunk{chunkID}/layers.csv")
+#    #data_path.format("layers.csv"))
+#)
 
 # Layer Labels
 ylab = list()
@@ -44,6 +94,13 @@ for i in np.arange(0, len(layers) - 1):
         ylab.append("Layer {}".format(int(i + 1)))
     else:
         ylab.append("{}".format(int(i + 1)))
+
+# alternative layer labels
+ylabels = []
+for i in range(len(layers)-1):
+    label = fr"$\sigma_{{\theta}}$ = {layers[i]:.3} - {layers[i+1]:.3}"
+    ylabels.append(label)
+print(ylabels)
 
 # Coefficients Heat Maps
 fig1, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 5))
@@ -59,12 +116,13 @@ hm = sns.heatmap(
     linewidths=0.5,
 )
 #hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
-hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     ["DNRN", "Denitrification", "Anammox", "Nitrite Oxidation", "$CaCO_3$ Dissolution"],
     rotation=45,
     horizontalalignment="right",
 )
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Mean Relative Reaction Rates")
 
 hm = sns.heatmap(
@@ -79,17 +137,20 @@ hm = sns.heatmap(
     linewidths=0.5,
 )
 #hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
-hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     ["DNRN", "Denitrification", "Anammox", "Nitrite Oxidation", "$CaCO_3$ Dissolution"],
     rotation=45,
     horizontalalignment="right",
 )
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Standard Deviation")
 fig1.tight_layout(pad=2.5)
 plt.savefig(
-    fig_path.format("reaction_coefficients.{}".format(fig_format))
+    #fig_path.format("reaction_coefficients.{}".format(fig_format))
+    f"figures/chunk{chunkID}/reaction_coefficients.PDF"
 )  # , dpi = dpi)
+fig1.suptitle(f"Chunk {chunkID}")
 plt.show()
 
 # Residuals  Heat Maps
@@ -106,7 +167,7 @@ hm = sns.heatmap(
     linewidths=0.5,
 )
 #hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
-hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     [
         "$\Delta$$NO_3^-$",
@@ -117,6 +178,7 @@ hm.set_xticklabels(
         "$\Delta$$DIC$",
     ]
 )
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Residuals")
 
 
@@ -131,7 +193,7 @@ hm = sns.heatmap(
     linewidths=0.5,
 )
 #hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
-hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
 hm.set_xticklabels(
     [
         "$\Delta$$NO_3^-$",
@@ -142,9 +204,14 @@ hm.set_xticklabels(
         "$\Delta$$DIC$",
     ]
 )
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Percentage Residuals")
 fig2.tight_layout(pad=2.5)
-plt.savefig(fig_path.format("residuals.{}".format(fig_format)), dpi=dpi)
+plt.savefig(
+    #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
+    f"figures/chunk{chunkID}/residuals.PDF"
+    )
+fig2.suptitle(f"Chunk {chunkID}")
 plt.show()
 
 # Relative Contributions
@@ -179,19 +246,20 @@ new3_se = (
 fig3, ((ax1, ax2, ax5), (ax3, ax6, ax4)) = plt.subplots(
     nrows=2, ncols=3, figsize=(15, 10)
 )
+#print(len(layers))
 ax1.barh(
     y=np.arange(1, len(layers)),
     width=relimp_mean[:, 0],
     xerr=relimp_se[:, 0],
     label="Anammox",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax1.barh(
     y=np.arange(1, len(layers)),
     width=relimp_mean[:, 1],
     left=relimp_mean[:, 0],
     label="Denitrification",
-    color="wheat",
+    color="mediumseagreen",
 )
 xx = np.linspace(0, 110, 10)
 yy = np.ones(np.shape(xx))
@@ -202,7 +270,8 @@ for i in np.arange(0, len(layers)-1):
 ax1.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax1.set(xlim=(0, 105))
 ax1.set_yticks(ticks=np.arange(1, len(layers)))
-ax1.set_yticklabels(labels=ylab, size=len(layers) - 1)
+#ax1.set_yticklabels(labels=ylab, size=len(layers) - 1)
+ax1.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax1.tick_params(axis="x", labelsize=fs + 3)
 ax1.tick_params(axis="y", labelsize=fs + 3)
 ax1.axes.xaxis.set_ticklabels([])
@@ -214,14 +283,14 @@ ax2.barh(
     width=relimp_mean[:, 2],
     xerr=relimp_se[:, 2],
     label="Nitrite Oxidation",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax2.barh(
     y=np.arange(1, len(layers)),
     width=relimp_mean[:, 3],
     left=relimp_mean[:, 2],
     label="Nitrite Reduction",
-    color="wheat",
+    color="mediumseagreen",
 )
 for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
@@ -230,7 +299,8 @@ for i in np.arange(0, len(layers)-1):
 ax2.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax2.set(xlim=(0, 105))
 ax2.set_yticks(ticks=np.arange(1, len(layers)))
-ax2.set_yticklabels(labels=ylab, size=len(layers) - 1)
+#ax2.set_yticklabels(labels=ylab, size=len(layers) - 1)
+ax2.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax2.tick_params(axis="x", labelsize=fs + 3)
 ax2.tick_params(axis="y", labelsize=fs + 3)
 ax2.axes.xaxis.set_ticklabels([])
@@ -243,14 +313,14 @@ ax3.barh(
     width=relimp_mean[:, 5],
     xerr=relimp_se[:, 5],
     label="DNRN",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax3.barh(
     y=np.arange(1, len(layers)),
     width=relimp_mean[:, 4],
     left=relimp_mean[:, 5],
     label="Nitrite Oxidation",
-    color="wheat",
+    color="mediumseagreen",
 )
 for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
@@ -260,7 +330,8 @@ ax3.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax3.set(xlim=(0, 105))
 ax3.set_xlabel("Relative Contribution %", fontsize=fs + 3)
 ax3.set_yticks(ticks=np.arange(1, len(layers)))
-ax3.set_yticklabels(labels=ylab, size=len(layers) - 1)
+#ax3.set_yticklabels(labels=ylab, size=len(layers) - 1)
+ax3.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax3.tick_params(axis="x", labelsize=fs + 3)
 ax3.tick_params(axis="y", labelsize=fs + 3)
 ax3.legend(loc=3, fontsize=13)
@@ -271,14 +342,14 @@ ax4.barh(
     width=relimp_mean[:, 7],
     xerr=relimp_se[:, 7],
     label="Other Reactions",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax4.barh(
     y=np.arange(1, len(layers)),
     width=relimp_mean[:, 6],
     left=relimp_mean[:, 7],
     label="$CaCO_3$ Dissolution",
-    color="wheat",
+    color="mediumseagreen",
 )
 for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
@@ -288,7 +359,8 @@ ax4.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax4.set(xlim=(0, 105))
 ax4.set_xlabel("Relative Contribution %", fontsize=fs + 3)
 ax4.set_yticks(ticks=np.arange(1, len(layers)))
-ax4.set_yticklabels(labels=ylab, size=len(layers)-1)
+#ax4.set_yticklabels(labels=ylab, size=len(layers)-1)
+ax4.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax4.tick_params(axis="x", labelsize=fs + 3)
 ax4.tick_params(axis="y", labelsize=fs + 3)
 ax4.axes.yaxis.set_ticklabels([])
@@ -300,14 +372,14 @@ ax5.barh(
     width=new2_dnrn,
     xerr=new2_se,
     label="DNRN",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax5.barh(
     y=np.arange(1, len(layers)),
     width=new2_denit,
     left=new2_dnrn,
     label="Denitrification",
-    color="wheat",
+    color="mediumseagreen",
 )
 for i in np.arange(0, len(layers)-1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
@@ -316,7 +388,8 @@ for i in np.arange(0, len(layers)-1):
 ax5.axvline(x=50, color="red", linewidth=1.5, ls="--")
 ax5.set(xlim=(0, 105))
 ax5.set_yticks(ticks=np.arange(1, len(layers)))
-ax5.set_yticklabels(labels=ylab, size=len(layers)-1)
+#ax5.set_yticklabels(labels=ylab, size=len(layers)-1)
+ax5.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax5.legend(loc=3, fontsize=13)
 ax5.tick_params(axis="x", labelsize=fs + 3)
 ax5.tick_params(axis="y", labelsize=fs + 3)
@@ -329,14 +402,14 @@ ax6.barh(
     width=new3_prod,
     xerr=new3_se,
     label="Nitrite Production",
-    color="thistle",
+    color="cornflowerblue",
 )
 ax6.barh(
     y=np.arange(1, len(layers)),
     width=new3_cons,
     left=new3_prod,
     label="Nitrite Consumption",
-    color="wheat",
+    color="mediumseagreen",
 )
 for i in np.arange(0, len(layers) - 1):
     yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
@@ -347,13 +420,57 @@ ax6.set(xlim=(0, 105))
 ax6.set_xlabel("Relative Contribution %", fontsize=fs + 3)
 ax6.set_yticks(ticks=np.arange(1, len(layers)))
 ax6.invert_yaxis()
-ax6.set_yticklabels(labels=ylab, size=len(layers) - 1)
+#ax6.set_yticklabels(labels=ylab, size=len(layers) - 1)
+ax6.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax6.tick_params(axis="x", labelsize=fs + 3)
 ax6.tick_params(axis="y", labelsize=fs + 3)
 ax6.axes.yaxis.set_ticklabels([])
 ax6.legend(loc=3, fontsize=13)
 
-
 fig3.tight_layout(pad=2.5)
-plt.savefig(fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi)
+fig3.suptitle(f"Chunk {chunkID}")
+plt.savefig(
+    #fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi
+    f"figures/chunk{chunkID}/relative_importances.PDF"
+    )
+plt.show()
+
+fig4, ax  = plt.subplots(1,1, figsize = (5,4))
+
+ax.barh(
+    y=np.arange(1, len(layers)),
+    width=relimp_mean[:, 7],
+    xerr=relimp_se[:, 7],
+    label="Other Reactions",
+    color="cornflowerblue",
+)
+ax.barh(
+    y=np.arange(1, len(layers)),
+    width=relimp_mean[:, 6],
+    left=relimp_mean[:, 7],
+    label="$CaCO_3$ Dissolution",
+    color="mediumseagreen",
+)
+for i in np.arange(0, len(layers)-1):
+    yy1 = np.linspace((i + 1) - 0.36, (i + 1) + 0.36, 5)
+    xx1 = relimp_mean[i, 7] * np.ones(np.shape(yy1))
+    ax4.plot(xx1, yy1, color="black", linewidth=1.0)
+ax.axvline(x=50, color="red", linewidth=1.5, ls="--")
+ax.set(xlim=(0, 105))
+ax.set_xlabel("Relative Contribution %", fontsize=fs + 3)
+ax.set_yticks(ticks=np.arange(1, len(layers)))
+#ax4.set_yticklabels(labels=ylab, size=len(layers)-1)
+ax.set_yticklabels(labels=ylabels, size=8, rotation=45)
+ax.tick_params(axis="x", labelsize=fs + 3)
+ax.tick_params(axis="y", labelsize=fs + 3)
+#ax.legend(loc=3, fontsize=13)
+ax.invert_yaxis()
+
+ax.set_title(f"Chunk {chunkID}", fontsize=13)
+
+fig4.tight_layout()
+plt.savefig(
+    #fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi
+    f"figures/chunk{chunkID}/relative_importances_2.PDF"
+    )
 plt.show()
