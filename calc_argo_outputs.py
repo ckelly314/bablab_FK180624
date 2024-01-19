@@ -1,14 +1,14 @@
 """
-File: calc_f5906484_outputs.py
+File: calc_argo_outputs.py
 ----------------------------
 
 Calculates the relative reaction rates and relative contributions based on the R matrix
 input selected with Monte Carlo simuations. For the delta_tracer values, the script fits
-the tracer data from f5906484_clean.csv file within each layer (defined in the script).
+the tracer data from data_clean.csv file within each layer (defined in the script).
 Saves relative contributions as a text file for further plotting.
 
 Inputs:
-    :f5906484_clean.csv: .csv file with cruise data and the following columns:
+    :data_clean.csv: .csv file with cruise data and the following columns:
         'Station'
         'lon'
         'lat'
@@ -66,32 +66,37 @@ import matplotlib.pyplot as plt
     #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
-chunkID = 5
+chunkID = 1
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
-    layers = np.array([25.5, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.8, 26.3, 26.5,27.2], dtype=float)  # in sigma0
 elif chunkID == 2:
     stations = np.arange(21,40)
     # Define Layers
-    layers = np.array([25.1, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35, 26.55,27.2], dtype=float)  # in sigma0
 elif chunkID == 3:
     stations = np.arange(40,44)
     # Define Layers
-    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35,26.5,27.3], dtype=float)  # in sigma0
 elif chunkID == 4:
     stations = np.arange(44,48)
     # Define Layers
-    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35,26.55,27.3], dtype=float)  # in sigma0
 elif chunkID == 5:
     stations = np.arange(48,57)
     # Define Layers
-    layers = np.array([25.99, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.2,26.55,27.3], dtype=float)  # in sigma0\
+elif chunkID == 6:
+    stations = np.arange(58,71)
+    # Define Layers
+    layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
 ###################
 
-def quickplot(xvar, yvar, regression, xlabel, ylabel, lower_boundary, upper_boundary):
+def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary):
     fig, ax = plt.subplots(1, 1, figsize=(3, 3))
-    ax.scatter(xvar, yvar)
+    ax.scatter(xvar, yvar,
+        c=cvar)
     xfit = np.linspace(xvar.min(), xvar.max())
     ax.plot(xfit, xfit * regression.params[1] + regression.params[0], color="k")
     textstr = f"$R^2$={regression.rsquared:.2}\np={regression.pvalues[1]:.2}"
@@ -101,17 +106,17 @@ def quickplot(xvar, yvar, regression, xlabel, ylabel, lower_boundary, upper_boun
     ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
     plt.tight_layout()
     plt.savefig(f"figures/chunk{chunkID}/{lower_boundary}-{upper_boundary}_{ylabel}vs{xlabel}.pdf",)
-    plt.show()
+    #plt.show()
 
 # Set Directory
-#fpath = "output/OM_variations/experimental2/{}"
-fpath = 'output/OM_variations/anderson/{}'
+fpath = "output/OM_variations/experimental2/{}"
+#fpath = 'output/OM_variations/anderson/{}'
 
 # Import Data
-f5906484 = pd.read_csv("f5906484_clean.csv")
-f5906484 = f5906484.dropna()
+data = pd.read_csv("data_clean.csv")
+data = data.dropna()
 R = np.loadtxt(fpath.format("R.txt"), delimiter=",")
-Rsolve = R[[0,1,3,4,5]] # remove rows for NH4 and Nstar
+Rsolve = R[[0,1,3,4,5]] # remove row for NH4
 
 # Define Inputs
 divider = 1#2  # Number of sublayers in each layer
@@ -119,20 +124,20 @@ K = 10000  # Number of Iterations for Monte Carlo Error Propagation
 
 ### Data Preparation ###
 # Select Stations
-idx_station = np.where(np.isin(f5906484["Station"], stations))
+idx_station = np.where(np.isin(data["Station"], stations))
 
 # Save Data Vectors
-rho = np.array(f5906484["rho"])[idx_station]  # kg/m3
-sigma0 = np.array(f5906484["sigma0"])[idx_station]  # kg/m3
-DIC = np.array(f5906484["DIC"])[idx_station]  # umol/kg
-DIP = np.array(f5906484["DIP"])[idx_station]  # umol/kg
-NO2 = np.array(f5906484["NO2"])[idx_station]  # umol/kg
-NO3 = np.array(f5906484["NO3"])[idx_station]  # umol/kg
-#NH4 = np.array(f5906484["NH4"])[idx_station]  # umol/kg
-Nstar = np.array(f5906484["Nstar"])[idx_station]  # umol/kg
-TA = np.array(f5906484["TA"])[idx_station]  # umol/kg
-pH = np.array(f5906484["pH"])[idx_station]
-O2 = np.array(f5906484["O2"])[idx_station]  # umol/kg
+rho = np.array(data["rho"])[idx_station]  # kg/m3
+sigma0 = np.array(data["sigma0"])[idx_station]  # kg/m3
+DIC = np.array(data["DIC"])[idx_station]  # umol/kg
+DIP = np.array(data["DIP"])[idx_station]  # umol/kg
+NO2 = np.array(data["NO2"])[idx_station]  # umol/kg
+NO3 = np.array(data["NO3"])[idx_station]  # umol/kg
+#NH4 = np.array(data["NH4"])[idx_station]  # umol/kg
+Nstar = np.array(data["Nstar"])[idx_station]  # umol/kg
+TA = np.array(data["TA"])[idx_station]  # umol/kg
+pH = np.array(data["pH"])[idx_station]
+O2 = np.array(data["O2"])[idx_station]  # umol/kg
 
 # divide layers up into sublayers
 sl = np.zeros((len(layers) - 1, divider + 1))
@@ -198,15 +203,15 @@ for i in np.arange(0, len(sublayers) - 1):
             [rf_DIC.params[1], rf_DIC.bse[1], rf_DIC.params[0], rf_DIC.bse[0]]
         )
 
-        quickplot(DIC[idx_layer], NO3[idx_layer], rf_NO3, 
+        quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
             "[DIC]", "[NO3-]", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], NO2[idx_layer], rf_NO2, 
+        quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
             "[DIC]", "[NO2-]", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], Nstar[idx_layer], rf_Nstar, 
+        quickplot(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, 
             "[DIC]", "N*", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], TA[idx_layer], rf_TA, 
+        quickplot(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, 
             "[DIC]", "TA", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], DIC[idx_layer], rf_DIC, 
+        quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
             "[DIC]", "[DIC]", lower_boundary, upper_boundary)
 
     else:
@@ -295,11 +300,11 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
             denit_iter[k] = 0
         '''
         if abs(R[1, 2] * c_temp[2] + R[1, 1] * c_temp[1]) != 0:
-            anmx_iter[k] = abs(R[1, 2] * c_temp[2]) / abs(R[1, 2] * c_temp[2] + R[1, 1] * c_temp[1]) * 100
-            denit_iter[k] = abs(R[1, 1] * c_temp[1]) / abs(R[1, 2] * c_temp[2] + R[1, 1] * c_temp[1])* 100
+            anmx_iter[k] = abs(R[1, 2] * c_temp[2]) / (abs(R[1, 2] * c_temp[2]) + abs(R[1, 1] * c_temp[1])) * 100
+            denit_iter[k] = abs(R[1, 1] * c_temp[1]) / (abs(R[1, 2] * c_temp[2]) + abs(R[1, 1] * c_temp[1]))* 100
         else:
-            anmx_iter[k] = 0
-            denit_iter[k] = 0
+            anmx_iter[k] = np.nan
+            denit_iter[k] = np.nan
 
         ox_iter[k] = (
             (R[1, 3] * c_temp[3] - R[0, 2] * c_temp[2])
@@ -420,14 +425,14 @@ np.savetxt(
     f"output/chunk{chunkID}/slopes_mean.csv",
     slopes_mean,
     delimiter=",",
-    header="NO3, NO2, NH4, Nstar, TA, DIC",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
 )
 np.savetxt(
     #fpath.format("slopes_se.csv"),
     f"output/chunk{chunkID}/slopes_se.csv",
     slopes_se,
     delimiter=",",
-    header="NO3, NO2, NH4, Nstar, TA, DIC",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
 )
 np.savetxt(
     #fpath.format("coeffs_mean.csv"),
@@ -476,14 +481,14 @@ np.savetxt(
     f"output/chunk{chunkID}/residuals.csv",
     residuals,
     delimiter=",",
-    header="NO3, NO2, NH4, Nstar, TA, DIC",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
 )
 np.savetxt(
     #fpath.format("percentage_residuals.csv"),
     f"output/chunk{chunkID}/percentage_residuals.csv",
     residuals_perc,
     delimiter=",",
-    header="NO3, NO2, NH4, Nstar, TA, DIC",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
 )
 np.savetxt(
     #fpath.format("reaction_matrix.csv"),

@@ -20,7 +20,7 @@ import numpy as np
 output_path = "output/OM_variations/{}"
 
 # Select Method
-method = "oxidation_states"  # select: "experimental", "anderson", "redfield", "oxidation_states" "redfield_oxidation_states"
+method = "anderson"  # select: "experimental", "anderson", "redfield", "oxidation_states" "redfield_oxidation_states"
 # Experimental refers to CNP ratio etc calculated in cacl_oxycline_features
 # _oxidation states refers to the sensitivity analysis
 
@@ -140,11 +140,11 @@ elif method == "anderson":  # anderson 1995
 # Experimental Chanrged OM
 elif method == "experimental":
     # Parameters
-    C = 112.5  # these come from the printout from "calc_oxycline_features.py"
-    N = 11.4
+    C = 110.545  # these come from the printout from "calc_oxycline_features.py"
+    N = 11.416
     P = 1
     charge = 0
-    Cox = 0.18
+    Cox = 0.77
     twoO_minus_H = Cox * C - charge - 3 * N + 5 * P
     # Stoichiometry calculations
     DNRN_NO3 = round(2 * C - 0.5 * (twoO_minus_H) - 1.5 * N + 2.5 * P, 2)

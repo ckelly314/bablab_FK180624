@@ -17,43 +17,44 @@ import statsmodels.api as sm
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
 
-chunkID = 5
+chunkID = 1
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
-    layers = np.array([25.5, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.8, 26.3, 26.5,27.2], dtype=float)  # in sigma0
 elif chunkID == 2:
     stations = np.arange(21,40)
     # Define Layers
-    layers = np.array([25.1, 26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35, 26.55,27.2], dtype=float)  # in sigma0
 elif chunkID == 3:
     stations = np.arange(40,44)
     # Define Layers
-    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35,26.5,27.3], dtype=float)  # in sigma0
 elif chunkID == 4:
     stations = np.arange(44,48)
     # Define Layers
-    layers = np.array([26.0, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.35,26.55,27.3], dtype=float)  # in sigma0
 elif chunkID == 5:
     stations = np.arange(48,57)
     # Define Layers
-    layers = np.array([25.99, 26.55,27.4], dtype=float)  # in sigma0
+    layers = np.array([25.75, 26.2,26.55,27.3], dtype=float)  # in sigma0
+elif chunkID == 6:
+    stations = np.arange(58,71)
+    # Define Layers
+    layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
 ###################
 
 # Set Directory
-file_path = "OM_variations/anderson/{}"
+file_path = "OM_variations/experimental2{}"
 data_path = f"output/chunk{chunkID}/" #"output/{}".format(file_path)
 fig_path = f"figures/chunk{chunkID}"  # .format(file_path)
 fig_format = "pdf"
 dpi = 500
-fs = 13
+fs = 8
 ff = "arial"
 
-# stations = np.arange(1,15,1, dtype=float)
-stations = np.arange(1,57) #np.array((1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 19))
-
 # Import Parameters and Results
-f5906484 = pd.read_csv("f5906484_clean.csv")
+data = pd.read_csv("data_clean.csv")
 coeffs_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/coeffs_mean.csv")
     #data_path.format("coeffs_mean.csv"))
 )
@@ -145,12 +146,12 @@ hm.set_xticklabels(
 )
 hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Standard Deviation")
+fig1.suptitle(f"Stations {stations[0]}-{stations[-1]}")
 fig1.tight_layout(pad=2.5)
 plt.savefig(
     #fig_path.format("reaction_coefficients.{}".format(fig_format))
     f"figures/chunk{chunkID}/reaction_coefficients.PDF"
 )  # , dpi = dpi)
-fig1.suptitle(f"Chunk {chunkID}")
 plt.show()
 
 # Residuals  Heat Maps
@@ -172,7 +173,7 @@ hm.set_xticklabels(
     [
         "$\Delta$$NO_3^-$",
         "$\Delta$$NO_2^-$",
-        "$\Delta$$NH_4^+$",
+        #"$\Delta$$NH_4^+$",
         "$\Delta$$N^*$",
         "$\Delta$$TA$",
         "$\Delta$$DIC$",
@@ -198,7 +199,7 @@ hm.set_xticklabels(
     [
         "$\Delta$$NO_3^-$",
         "$\Delta$$NO_2^-$",
-        "$\Delta$$NH_4^+$",
+        #"$\Delta$$NH_4^+$",
         "$\Delta$$N^*$",
         "$\Delta$$TA$",
         "$\Delta$$DIC$",
@@ -207,11 +208,11 @@ hm.set_xticklabels(
 hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Percentage Residuals")
 fig2.tight_layout(pad=2.5)
+fig2.suptitle(f"Stations {stations[0]}-{stations[-1]}")
 plt.savefig(
     #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/residuals.PDF"
     )
-fig2.suptitle(f"Chunk {chunkID}")
 plt.show()
 
 # Relative Contributions
@@ -244,7 +245,7 @@ new3_se = (
 ) * new3_prod
 
 fig3, ((ax1, ax2, ax5), (ax3, ax6, ax4)) = plt.subplots(
-    nrows=2, ncols=3, figsize=(15, 10)
+    nrows=2, ncols=3, figsize=(10, 7)
 )
 #print(len(layers))
 ax1.barh(
@@ -275,7 +276,7 @@ ax1.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax1.tick_params(axis="x", labelsize=fs + 3)
 ax1.tick_params(axis="y", labelsize=fs + 3)
 ax1.axes.xaxis.set_ticklabels([])
-ax1.legend(loc=3, fontsize=13)
+ax1.legend(loc=3, fontsize=8)
 ax1.invert_yaxis()
 
 ax2.barh(
@@ -305,7 +306,7 @@ ax2.tick_params(axis="x", labelsize=fs + 3)
 ax2.tick_params(axis="y", labelsize=fs + 3)
 ax2.axes.xaxis.set_ticklabels([])
 ax2.axes.yaxis.set_ticklabels([])
-ax2.legend(loc=3, fontsize=13)
+ax2.legend(loc=3, fontsize=8)
 ax2.invert_yaxis()
 
 ax3.barh(
@@ -334,7 +335,7 @@ ax3.set_yticks(ticks=np.arange(1, len(layers)))
 ax3.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax3.tick_params(axis="x", labelsize=fs + 3)
 ax3.tick_params(axis="y", labelsize=fs + 3)
-ax3.legend(loc=3, fontsize=13)
+ax3.legend(loc=3, fontsize=8)
 ax3.invert_yaxis()
 
 ax4.barh(
@@ -364,7 +365,7 @@ ax4.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax4.tick_params(axis="x", labelsize=fs + 3)
 ax4.tick_params(axis="y", labelsize=fs + 3)
 ax4.axes.yaxis.set_ticklabels([])
-ax4.legend(loc=3, fontsize=13)
+ax4.legend(loc=3, fontsize=8)
 ax4.invert_yaxis()
 
 ax5.barh(
@@ -390,7 +391,7 @@ ax5.set(xlim=(0, 105))
 ax5.set_yticks(ticks=np.arange(1, len(layers)))
 #ax5.set_yticklabels(labels=ylab, size=len(layers)-1)
 ax5.set_yticklabels(labels=ylabels, size=8, rotation=45)
-ax5.legend(loc=3, fontsize=13)
+ax5.legend(loc=3, fontsize=8)
 ax5.tick_params(axis="x", labelsize=fs + 3)
 ax5.tick_params(axis="y", labelsize=fs + 3)
 ax5.axes.xaxis.set_ticklabels([])
@@ -425,10 +426,10 @@ ax6.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax6.tick_params(axis="x", labelsize=fs + 3)
 ax6.tick_params(axis="y", labelsize=fs + 3)
 ax6.axes.yaxis.set_ticklabels([])
-ax6.legend(loc=3, fontsize=13)
+ax6.legend(loc=3, fontsize=8)
 
 fig3.tight_layout(pad=2.5)
-fig3.suptitle(f"Chunk {chunkID}")
+fig3.suptitle(f"Stations {stations[0]}-{stations[-1]}")
 plt.savefig(
     #fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/relative_importances.PDF"
@@ -463,10 +464,10 @@ ax.set_yticks(ticks=np.arange(1, len(layers)))
 ax.set_yticklabels(labels=ylabels, size=8, rotation=45)
 ax.tick_params(axis="x", labelsize=fs + 3)
 ax.tick_params(axis="y", labelsize=fs + 3)
-#ax.legend(loc=3, fontsize=13)
+ax.legend(loc=3, fontsize=13)
 ax.invert_yaxis()
 
-ax.set_title(f"Chunk {chunkID}", fontsize=13)
+ax.set_title(f"Stations {stations[0]}-{stations[-1]}", fontsize=13)
 
 fig4.tight_layout()
 plt.savefig(
