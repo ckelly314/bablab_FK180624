@@ -66,7 +66,7 @@ import matplotlib.pyplot as plt
     #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
-chunkID = 1
+chunkID = 6
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -95,12 +95,13 @@ elif chunkID == 6:
 
 def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary):
     fig, ax = plt.subplots(1, 1, figsize=(3, 3))
-    ax.scatter(xvar, yvar,
+    cax = ax.scatter(xvar, yvar,
         c=cvar)
     xfit = np.linspace(xvar.min(), xvar.max())
     ax.plot(xfit, xfit * regression.params[1] + regression.params[0], color="k")
     textstr = f"$R^2$={regression.rsquared:.2}\np={regression.pvalues[1]:.2}"
     ax.text(0.05, 0.8, textstr, transform = ax.transAxes)
+    fig.colorbar(cax).set_label(r"$\sigma_{\theta}$")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
     ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
