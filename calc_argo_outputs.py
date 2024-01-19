@@ -66,7 +66,7 @@ import matplotlib.pyplot as plt
     #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
-chunkID = 6
+chunkID = 7
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -91,6 +91,10 @@ elif chunkID == 6:
     stations = np.arange(58,71)
     # Define Layers
     layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
+if chunkID == 7:
+    stations = np.arange(1,72)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
 ###################
 
 def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary):
@@ -107,7 +111,7 @@ def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, uppe
     ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
     plt.tight_layout()
     plt.savefig(f"figures/chunk{chunkID}/{lower_boundary}-{upper_boundary}_{ylabel}vs{xlabel}.pdf",)
-    #plt.show()
+    plt.show()
 
 # Set Directory
 fpath = "output/OM_variations/experimental2/{}"
@@ -120,7 +124,7 @@ R = np.loadtxt(fpath.format("R.txt"), delimiter=",")
 Rsolve = R[[0,1,3,4,5]] # remove row for NH4
 
 # Define Inputs
-divider = 1#2  # Number of sublayers in each layer
+divider = 2  # Number of sublayers in each layer
 K = 10000  # Number of Iterations for Monte Carlo Error Propagation
 
 ### Data Preparation ###

@@ -17,7 +17,7 @@ import statsmodels.api as sm
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
 
-chunkID = 1
+chunkID = 7
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -42,6 +42,10 @@ elif chunkID == 6:
     stations = np.arange(58,71)
     # Define Layers
     layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
+if chunkID == 7:
+    stations = np.arange(1,72)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
 ###################
 
 # Set Directory
@@ -52,6 +56,13 @@ fig_format = "pdf"
 dpi = 500
 fs = 8
 ff = "arial"
+
+# divide layers up into sublayers
+divider = 2  # Number of sublayers in each layer
+sl = np.zeros((len(layers) - 1, divider + 1))
+for i in np.arange(0, len(layers) - 1):
+    sl[i,] = np.linspace(layers[i], layers[i + 1], divider + 1)
+layers = np.unique(sl)
 
 # Import Parameters and Results
 data = pd.read_csv("data_clean.csv")
