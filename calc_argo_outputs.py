@@ -58,6 +58,8 @@ import numpy as np
 import statsmodels.api as sm
 import scipy.optimize as sc
 import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set_context("notebook", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 ### USER INPUTS ###
 # stations = np.arange(1,15,1, dtype=float) # Stations selected for analysis
@@ -66,7 +68,7 @@ import matplotlib.pyplot as plt
     #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
-chunkID = 7
+chunkID = "lownitrite"
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -91,27 +93,43 @@ elif chunkID == 6:
     stations = np.arange(58,71)
     # Define Layers
     layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
-if chunkID == 7:
+elif chunkID == 7:
     stations = np.arange(1,72)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
+elif chunkID == "lownitrite":
+    stations = np.arange(1,30)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
+elif chunkID == "highnitrite":
+    stations = np.arange(30,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
 ###################
 
-def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary):
-    fig, ax = plt.subplots(1, 1, figsize=(3, 3))
+def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary, slope_est):
+    fig, ax = plt.subplots(1, 1, figsize=(7, 4))
     cax = ax.scatter(xvar, yvar,
         c=cvar)
     xfit = np.linspace(xvar.min(), xvar.max())
-    ax.plot(xfit, xfit * regression.params[1] + regression.params[0], color="k")
+    ax.plot(xfit, xfit * regression.params[1] + regression.params[0], color="k",
+        label = "obs")
+    y1 = np.median(xfit) * regression.params[1] + regression.params[0]
+    y2 =  np.median(xfit) * slope_est
+    offset = y1-y2
+    ax.plot(xfit, xfit * slope_est + offset, color="r",
+        label = "est")
     textstr = f"$R^2$={regression.rsquared:.2}\np={regression.pvalues[1]:.2}"
-    ax.text(0.05, 0.8, textstr, transform = ax.transAxes)
+    ax.text(0.05, 0.95, textstr, transform = ax.transAxes,
+        verticalalignment = "top")
     fig.colorbar(cax).set_label(r"$\sigma_{\theta}$")
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
-    ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary}-{upper_boundary}')
+    ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary:.4}-{upper_boundary:.4}')
+    ax.legend(bbox_to_anchor=(1.4,1), loc="upper left")
     plt.tight_layout()
     plt.savefig(f"figures/chunk{chunkID}/{lower_boundary}-{upper_boundary}_{ylabel}vs{xlabel}.pdf",)
-    plt.show()
+    #plt.show()
 
 # Set Directory
 fpath = "output/OM_variations/experimental2/{}"
@@ -207,7 +225,7 @@ for i in np.arange(0, len(sublayers) - 1):
         fitting_DIC[i, :] = np.array(
             [rf_DIC.params[1], rf_DIC.bse[1], rf_DIC.params[0], rf_DIC.bse[0]]
         )
-
+        '''
         quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
             "[DIC]", "[NO3-]", lower_boundary, upper_boundary)
         quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
@@ -218,6 +236,7 @@ for i in np.arange(0, len(sublayers) - 1):
             "[DIC]", "TA", lower_boundary, upper_boundary)
         quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
             "[DIC]", "[DIC]", lower_boundary, upper_boundary)
+        '''
 
     else:
         print(f"no data {sublayers[i]}-{sublayers[i + 1]}")
@@ -424,6 +443,44 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
     residuals[i, :] = slopes_obs[i, :] - slopes_est[i, :]
     residuals_perc[i, :] = abs(residuals[i, :]) / abs(slopes_obs[i, :]) * 100
 
+for i in np.arange(0, len(sublayers) - 1):
+    lower_boundary = sublayers[i]
+    upper_boundary = sublayers[i + 1]
+    idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary))
+    if chunkID == 5:
+        idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary)
+            & (DIC < 2300))
+
+    # Robust Regression
+    if len(DIC[idx_layer]) > 0:
+        xx = sm.add_constant(DIC[idx_layer])
+        rf_NO3 = sm.OLS(NO3[idx_layer], xx, 
+            #M=sm.robust.norms.HuberT()
+            ).fit()
+        rf_NO2 = sm.OLS(NO2[idx_layer], xx, 
+            #M=sm.robust.norms.HuberT()
+            ).fit()
+        #rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
+        rf_Nstar = sm.OLS(Nstar[idx_layer], xx, 
+            #M=sm.robust.norms.HuberT()
+            ).fit()
+        rf_TA = sm.OLS(TA[idx_layer], xx, 
+            #M=sm.robust.norms.HuberT()
+            ).fit()
+        rf_DIC = sm.OLS(DIC[idx_layer], xx, 
+            #M=sm.robust.norms.HuberT()
+            ).fit()
+        quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
+            "[DIC]", "[NO3-]", lower_boundary, upper_boundary, slopes_est[i,0])
+        quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
+            "[DIC]", "[NO2-]", lower_boundary, upper_boundary, slopes_est[i,1])
+        quickplot(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, 
+            "[DIC]", "N*", lower_boundary, upper_boundary, slopes_est[i,2])
+        quickplot(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, 
+            "[DIC]", "TA", lower_boundary, upper_boundary, slopes_est[i,3])
+        quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
+            "[DIC]", "[DIC]", lower_boundary, upper_boundary, slopes_est[i,4])
+
 ### Save the Outputs as a CSV file ###
 np.savetxt(
     #fpath.format("slopes_mean.csv"),
@@ -480,6 +537,20 @@ np.savetxt(
     relimp_se,
     delimiter=",",
     header="anmx, denit, ox, red, nitox, dnrn, caco3 diss, other DIC",
+)
+np.savetxt(
+    #fpath.format("residuals.csv"),
+    f"output/chunk{chunkID}/slopes_obs.csv",
+    slopes_obs,
+    delimiter=",",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
+)
+np.savetxt(
+    #fpath.format("residuals.csv"),
+    f"output/chunk{chunkID}/slopes_est.csv",
+    slopes_est,
+    delimiter=",",
+    header="NO3, NO2, Nstar, TA, DIC", #"NO3, NO2, NH4, Nstar, TA, DIC",
 )
 np.savetxt(
     #fpath.format("residuals.csv"),

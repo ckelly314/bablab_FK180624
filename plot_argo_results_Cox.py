@@ -17,7 +17,7 @@ import statsmodels.api as sm
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
 
-chunkID = 7
+chunkID = "lownitrite"
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -42,8 +42,16 @@ elif chunkID == 6:
     stations = np.arange(58,71)
     # Define Layers
     layers = np.array([25.99, 26.25, 26.55,27.2], dtype=float)  # in sigma0
-if chunkID == 7:
+elif chunkID == 7:
     stations = np.arange(1,72)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
+elif chunkID == "lownitrite":
+    stations = np.arange(1,30)
+    # Define Layers
+    layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
+elif chunkID == "highnitrite":
+    stations = np.arange(30,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
 ###################
@@ -78,6 +86,12 @@ slopes_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_mean.csv")
 slopes_se = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_se.csv")
     #data_path.format("slopes_se.csv"))
 )
+slopes_obs = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_obs.csv")
+    #data_path.format("residuals.csv"))
+)
+slopes_est = np.array(pd.read_csv(f"output/chunk{chunkID}/slopes_est.csv")
+    #data_path.format("residuals.csv"))
+)
 residuals_perc = np.array(pd.read_csv(f"output/chunk{chunkID}/percentage_residuals.csv")
     #data_path.format("percentage_residuals.csv"))
 )
@@ -110,7 +124,7 @@ for i in np.arange(0, len(layers) - 1):
 # alternative layer labels
 ylabels = []
 for i in range(len(layers)-1):
-    label = fr"$\sigma_{{\theta}}$ = {layers[i]:.3} - {layers[i+1]:.3}"
+    label = fr"$\sigma_{{\theta}}$ = {layers[i]:.4} - {layers[i+1]:.4}"
     ylabels.append(label)
 print(ylabels)
 
@@ -223,6 +237,67 @@ fig2.suptitle(f"Stations {stations[0]}-{stations[-1]}")
 plt.savefig(
     #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/residuals.PDF"
+    )
+plt.show()
+
+# slopes obs vs slopes est  Heat Maps
+fig2b, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 5))
+hm = sns.heatmap(
+    ax=ax1,
+    data=slopes_obs,
+    annot=True,
+    annot_kws={"size": 6},
+    fmt=".4f",
+    cmap="coolwarm",
+    vmin=np.min(slopes_obs),
+    vmax=np.max(slopes_obs),
+    linewidths=0.5,
+)
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+hm.set_xticklabels(
+    [
+        "$\Delta$$NO_3^-$",
+        "$\Delta$$NO_2^-$",
+        #"$\Delta$$NH_4^+$",
+        "$\Delta$$N^*$",
+        "$\Delta$$TA$",
+        "$\Delta$$DIC$",
+    ]
+)
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
+hm.set_title("Observed slopes")
+
+
+hm = sns.heatmap(
+    ax=ax2,
+    data=slopes_est,
+    annot=True,
+    annot_kws={"size": 6},
+    cmap="coolwarm",
+    vmin=np.min(slopes_obs),
+    vmax=np.max(slopes_obs),
+    linewidths=0.5,
+)
+#hm.set_yticks(ticks=np.arange(0.5, 16.5, 1))
+#hm.set_yticklabels(labels=ylab, size=8, rotation=0)
+hm.set_xticklabels(
+    [
+        "$\Delta$$NO_3^-$",
+        "$\Delta$$NO_2^-$",
+        #"$\Delta$$NH_4^+$",
+        "$\Delta$$N^*$",
+        "$\Delta$$TA$",
+        "$\Delta$$DIC$",
+    ]
+)
+hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
+hm.set_title("Estimated slopes")
+fig2b.tight_layout(pad=2.5)
+fig2b.suptitle(f"Stations {stations[0]}-{stations[-1]}")
+plt.savefig(
+    #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
+    f"figures/chunk{chunkID}/slopesobsest.PDF"
     )
 plt.show()
 
