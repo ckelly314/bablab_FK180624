@@ -59,6 +59,7 @@ import statsmodels.api as sm
 import scipy.optimize as sc
 import matplotlib.pyplot as plt
 import seaborn as sns
+import warnings # suppress warning for mean of empty slice
 sns.set_context("notebook", font_scale=1.5, rc={"lines.linewidth": 2.5})
 
 ### USER INPUTS ###
@@ -68,7 +69,8 @@ sns.set_context("notebook", font_scale=1.5, rc={"lines.linewidth": 2.5})
     #[25, 25.5, 25.8, 26.21, 26.31, 26.44, 26.67, 27, 27.3], dtype=float
 #    [25.5, 26, 27.3], dtype=float
 #)  # in sigma0
-chunkID = "lownitrite"
+chunkID = "highnitrite"
+makeplots = True
 if chunkID == 1:
     stations = np.arange(1,21)
     # Define Layers
@@ -97,17 +99,43 @@ elif chunkID == 7:
     stations = np.arange(1,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
-elif chunkID == "lownitrite":
+elif chunkID == "highnitrite":
     stations = np.arange(1,30)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
-elif chunkID == "highnitrite":
+elif chunkID == "lownitrite":
     stations = np.arange(30,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
 ###################
 
-def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary, slope_est):
+def quickplot(xvar, yvar, cvar, huberregression, olsregression, xlabel, ylabel, lower_boundary, upper_boundary,
+             huber_loss, sse):
+    fig, ax = plt.subplots(1, 1, figsize=(8, 4))
+    cax = ax.scatter(xvar, yvar,
+        c=cvar)
+    xfit = np.linspace(xvar.min(), xvar.max())
+    
+    ax.plot(xfit, xfit * huberregression.params[1] + huberregression.params[0], color="k",
+        label = "Robust HuberT")
+    ax.plot(xfit, xfit * olsregression.params[1] + olsregression.params[0], color="k", linestyle = ":",
+        label = "OLS")
+    
+    textstr = f"Huber Loss={huber_loss:.4}\nSSE={sse:.4}\np={huberregression.pvalues[1]:.3}"
+    
+    ax.text(1.5, 0.0, textstr, transform = ax.transAxes,
+        verticalalignment = "bottom")
+    
+    fig.colorbar(cax).set_label(r"$\sigma_{\theta}$")
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_title(fr'$\sigma_{{\theta}}${lower_boundary:.4}-{upper_boundary:.4}')
+    ax.legend(bbox_to_anchor=(1.5,1), loc="upper left")
+    plt.tight_layout()
+    plt.savefig(f"figures/chunk{chunkID}/{lower_boundary}-{upper_boundary}_{ylabel}vs{xlabel}.pdf",)
+    plt.show()
+
+def plotobsest(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, upper_boundary, slope_est):
     fig, ax = plt.subplots(1, 1, figsize=(7, 4))
     cax = ax.scatter(xvar, yvar,
         c=cvar)
@@ -119,7 +147,7 @@ def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, uppe
     offset = y1-y2
     ax.plot(xfit, xfit * slope_est + offset, color="r",
         label = "est")
-    textstr = f"$R^2$={regression.rsquared:.2}\np={regression.pvalues[1]:.2}"
+    textstr = f"p={regression.pvalues[1]:.2}"
     ax.text(0.05, 0.95, textstr, transform = ax.transAxes,
         verticalalignment = "top")
     fig.colorbar(cax).set_label(r"$\sigma_{\theta}$")
@@ -129,7 +157,28 @@ def quickplot(xvar, yvar, cvar, regression, xlabel, ylabel, lower_boundary, uppe
     ax.legend(bbox_to_anchor=(1.4,1), loc="upper left")
     plt.tight_layout()
     plt.savefig(f"figures/chunk{chunkID}/{lower_boundary}-{upper_boundary}_{ylabel}vs{xlabel}.pdf",)
-    #plt.show()
+    plt.show()
+
+def huberregression(Y, xx):
+    rf = sm.RLM(Y, xx, M=sm.robust.norms.HuberT()).fit()
+    # Residuals
+    resid = rf.resid
+    delta = sm.robust.norms.HuberT().t
+    
+    # Compute Huber loss manually
+    huber_loss = np.where(np.abs(resid) <= delta,
+                          0.5 * resid**2,
+                          delta * (np.abs(resid) - 0.5 * delta))
+    
+    huber_loss = np.sum(huber_loss)
+    
+    print(f"Total Huber loss: {huber_loss:.3f}")
+
+    ols_model = sm.OLS(Y, xx).fit()
+    sse = np.sum((Y - ols_model.fittedvalues) ** 2)
+    print(f"OLS SSE: {sse:.3f}")
+    
+    return (rf, ols_model, huber_loss, sse)
 
 # Set Directory
 fpath = "output/OM_variations/experimental2/{}"
@@ -140,6 +189,13 @@ data = pd.read_csv("data_clean.csv")
 data = data.dropna()
 R = np.loadtxt(fpath.format("R.txt"), delimiter=",")
 Rsolve = R[[0,1,3,4,5]] # remove row for NH4
+
+# check dates
+stationdict = {"highnitrite":np.arange(1,30),
+               "lownitrite":np.arange(30,72)}  # in sigma0
+mindate = data[np.isin(data.Station, stationdict[chunkID])].Date.unique().min()
+maxdate = data[np.isin(data.Station, stationdict[chunkID])].Date.unique().max()
+print(chunkID, mindate, maxdate)
 
 # Define Inputs
 divider = 2  # Number of sublayers in each layer
@@ -161,6 +217,7 @@ Nstar = np.array(data["Nstar"])[idx_station]  # umol/kg
 TA = np.array(data["TA"])[idx_station]  # umol/kg
 pH = np.array(data["pH"])[idx_station]
 O2 = np.array(data["O2"])[idx_station]  # umol/kg
+depth = np.array(data["Depth"])[idx_station]
 
 # divide layers up into sublayers
 sl = np.zeros((len(layers) - 1, divider + 1))
@@ -170,6 +227,7 @@ sublayers = np.unique(sl)
 
 ### Robust Linear Regression ###
 # Create Results Arrays
+# for each slice of water between defined sublayers, store (slope, slope error, intercept, intercept error)
 fitting_NO3 = np.zeros((len(sublayers) - 1, 4))
 fitting_NO2 = np.zeros((len(sublayers) - 1, 4))
 #fitting_NH4 = np.zeros((len(sublayers) - 1, 4))
@@ -178,6 +236,12 @@ fitting_TA = np.zeros((len(sublayers) - 1, 4))
 fitting_DIC = np.zeros((len(sublayers) - 1, 4))
 
 # Run Robost Linear Regression
+# store number of data points in each layer for model stats
+npoints = np.zeros((len(sublayers) - 1,1))
+sigmas = np.zeros((len(sublayers) - 1,1))
+depths = np.zeros((len(sublayers) - 1,1))
+depthserr = np.zeros((len(sublayers) - 1,1))
+
 for i in np.arange(0, len(sublayers) - 1):
     lower_boundary = sublayers[i]
     upper_boundary = sublayers[i + 1]
@@ -188,25 +252,24 @@ for i in np.arange(0, len(sublayers) - 1):
 
     # Robust Regression
     if len(DIC[idx_layer]) > 0:
+        # DIC is the x-variable against which we regress NO2-, NO2-, N*, TA, and DIC (the last of which should be 1:1)
         xx = sm.add_constant(DIC[idx_layer])
-        rf_NO3 = sm.OLS(NO3[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_NO2 = sm.OLS(NO2[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        #rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
-        rf_Nstar = sm.OLS(Nstar[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_TA = sm.OLS(TA[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_DIC = sm.OLS(DIC[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
+        npoints[i] = len(xx)
+        sigmas[i] = (lower_boundary + upper_boundary)/2
+        depths[i] = np.nanmean(depth[idx_layer])
+        depthserr[i] = np.nanstd(depth[idx_layer])
+
+        # robust regression
+        rf_NO3, ols_NO3, loss_NO3, sse_NO3 = huberregression(NO3[idx_layer], xx)
+        rf_NO2, ols_NO2, loss_NO2, sse_NO2 = huberregression(NO2[idx_layer], xx)
+        #rf_NH4, ols_NH4, loss_NH4, sse_NH4 = huberregression(NH4[idx_layer], xx)
+        rf_Nstar, ols_Nstar, loss_Nstar, sse_Nstar = huberregression(Nstar[idx_layer], xx)
+        rf_TA, ols_TA, loss_TA, sse_TA = huberregression(TA[idx_layer], xx)
+        rf_DIC, ols_DIC, loss_DIC, sse_DIC = huberregression(DIC[idx_layer], xx)
 
         # Save Results
+        # columns in "fitting_NO3" are slope, slope err, int, int err
+        # rows correspond to each slice of water between sublayers
         fitting_NO3[i, :] = np.array(
             [rf_NO3.params[1], rf_NO3.bse[1], rf_NO3.params[0], rf_NO3.bse[0]]
         )
@@ -226,16 +289,16 @@ for i in np.arange(0, len(sublayers) - 1):
             [rf_DIC.params[1], rf_DIC.bse[1], rf_DIC.params[0], rf_DIC.bse[0]]
         )
         '''
-        quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
-            "[DIC]", "[NO3-]", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
-            "[DIC]", "[NO2-]", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, 
-            "[DIC]", "N*", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, 
-            "[DIC]", "TA", lower_boundary, upper_boundary)
-        quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
-            "[DIC]", "[DIC]", lower_boundary, upper_boundary)
+        quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, ols_NO3,
+            "[DIC]", "[NO3-]", lower_boundary, upper_boundary, loss_NO3, sse_NO3)
+        quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, ols_NO2,
+            "[DIC]", "[NO2-]", lower_boundary, upper_boundary, loss_NO2, sse_NO2)
+        quickplot(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, ols_Nstar,
+            "[DIC]", "N*", lower_boundary, upper_boundary, loss_Nstar, sse_Nstar)
+        quickplot(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, ols_TA,
+            "[DIC]", "TA", lower_boundary, upper_boundary, loss_TA, sse_TA)
+        quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, ols_DIC,
+            "[DIC]", "[DIC]", lower_boundary, upper_boundary, loss_DIC, sse_DIC)
         '''
 
     else:
@@ -243,17 +306,17 @@ for i in np.arange(0, len(sublayers) - 1):
 
 
 # Save Slopes
-slopes_mean = np.array(
+slopes_mean = np.array( # organize slopes together into one array
     [
-        fitting_NO3[:, 0].T,
-        fitting_NO2[:, 0].T,
-        #fitting_NH4[:, 0].T,
-        fitting_Nstar[:, 0].T,
-        fitting_TA[:, 0].T,
-        fitting_DIC[:, 0].T,
+        fitting_NO3[:, 0],
+        fitting_NO2[:, 0],
+        #fitting_NH4[:, 0],
+        fitting_Nstar[:, 0],
+        fitting_TA[:, 0],
+        fitting_DIC[:, 0],
     ]
 ).T
-slopes_se = np.array(
+slopes_se = np.array( # organize slope errors into another array
     [
         fitting_NO3[:, 1],
         fitting_NO2[:, 1],
@@ -263,6 +326,32 @@ slopes_se = np.array(
         fitting_DIC[:, 1],
     ]
 ).T
+
+# Layer Labels
+ylabels = []
+for i in range(len(sublayers)-1):
+    label = f"sigma_theta = {sublayers[i]:.4} - {sublayers[i+1]:.4}"
+    ylabels.append(label)
+
+# generate Excel file for visual inspection
+slopeoutput = pd.DataFrame(slopes_mean, columns = ["NO3vsDICslope", "NO2vsDICslope", "NstarvsDICslope","TAvsDICslope","DICvsDICslope"])
+slopeoutput2 = pd.DataFrame(slopes_se, columns = ["NO3vsDICerr", "NO2vsDICerr", "NstarvsDICerr","TAvsDICerr","DICvsDICerr"])
+slopeoutput["layer"] = ylabels
+slopeoutput2["layer"] = ylabels
+slopeoutput = slopeoutput.set_index("layer", drop=True)
+slopeoutput2 = slopeoutput2.set_index("layer", drop=True)
+slopeoutput = slopeoutput.join(slopeoutput2)
+slopeoutput["n"] = npoints
+slopeoutput["sigma0"] = sigmas
+slopeoutput["depth"] = depths
+slopeoutput["deptherr"] = depthserr
+slopeoutput = slopeoutput[["n","sigma0","depth","deptherr",
+    'NO3vsDICslope','NO3vsDICerr',
+                           'NO2vsDICslope','NO2vsDICerr',
+                           'NstarvsDICslope','NstarvsDICerr',
+                           'TAvsDICslope','TAvsDICerr',
+                           'DICvsDICslope','DICvsDICerr']]
+slopeoutput.to_excel(f"output/chunk{chunkID}/slopesDF.xlsx")
 
 ### Reaction Coefficient, Relative Contributions, and Residuals Calculations with Monte Carlo Error Propagation ###
 # Create Results Arrays
@@ -323,51 +412,55 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
             anmx_iter[k] = 0
             denit_iter[k] = 0
         '''
-        if abs(R[1, 2] * c_temp[2] + R[1, 1] * c_temp[1]) != 0:
-            anmx_iter[k] = abs(R[1, 2] * c_temp[2]) / (abs(R[1, 2] * c_temp[2]) + abs(R[1, 1] * c_temp[1])) * 100
-            denit_iter[k] = abs(R[1, 1] * c_temp[1]) / (abs(R[1, 2] * c_temp[2]) + abs(R[1, 1] * c_temp[1]))* 100
-        else:
+
+        #if abs(R[1, 2] * coeff_iter[k, :][2] + R[1, 1] * coeff_iter[k, :][1]) != 0:
+        if (coeff_iter[k, :][2] != 0) | (coeff_iter[k, :][1] != 0): # if relative reaction rate of anammox OR denit != 0,
+            # calculate proportional contributions of anammox and denit to nitrite drawdown
+            anmx_iter[k] = abs(R[1, 2] * coeff_iter[k, :][2]) / (abs(R[1, 2] * coeff_iter[k, :][2]) + abs(R[1, 1] * coeff_iter[k, :][1])) * 100
+            denit_iter[k] = abs(R[1, 1] * coeff_iter[k, :][1]) / (abs(R[1, 2] * coeff_iter[k, :][2]) + abs(R[1, 1] * coeff_iter[k, :][1]))* 100
+        else: # otherwise, set relative proportions of anammox and denit to NaN
             anmx_iter[k] = np.nan
             denit_iter[k] = np.nan
 
-        ox_iter[k] = (
-            (R[1, 3] * c_temp[3] - R[0, 2] * c_temp[2])
+        # calculate net nitrite oxidation 
+        ox_iter[k] = ( # little bit of nitrite is effectively oxidized to nitrate during anammox
+            (R[1, 3] * coeff_iter[k, 3] - R[0, 2] * coeff_iter[k, 2]) # R[NO2, nitrox]*coeffs[nitrox] - R[NO3, anammox]*coeffs[anammox]
             / (
-                R[1, 2] * c_temp[2]
-                + R[1, 1] * c_temp[1]
-                + R[1, 3] * c_temp[3]
-                - R[0, 2] * c_temp[2]
+                R[1, 2] * coeff_iter[k, 2]
+                + R[1, 1] * coeff_iter[k, 1]
+                + R[1, 3] * coeff_iter[k, 3]
+                - R[0, 2] * coeff_iter[k, 2]
             )
             * 100
         )
         red_iter[k] = (
-            (R[1, 2] * c_temp[2] + R[1, 1] * c_temp[1])
+            (R[1, 2] * coeff_iter[k, 2] + R[1, 1] * coeff_iter[k, 1])
             / (
-                R[1, 2] * c_temp[2]
-                + R[1, 1] * c_temp[1]
-                + R[1, 3] * c_temp[3]
-                - R[0, 2] * c_temp[2]
+                R[1, 2] * coeff_iter[k, 2]
+                + R[1, 1] * coeff_iter[k, 1]
+                + R[1, 3] * coeff_iter[k, 3]
+                - R[0, 2] * coeff_iter[k, 2]
             )
             * 100
         )
         nitox_iter[k] = (
-            abs(R[1, 3] * c_temp[3])
-            / abs(R[1, 3] * c_temp[3] - R[1, 0] * c_temp[0])
+            abs(R[1, 3] * coeff_iter[k, 3])
+            / abs(R[1, 3] * coeff_iter[k, 3] - R[1, 0] * coeff_iter[k, 0])
             * 100
         )
         dnrn_iter[k] = (
-            abs(R[1, 0] * c_temp[0])
-            / abs(R[1, 3] * c_temp[3] - R[1, 0] * c_temp[0])
+            abs(R[1, 0] * coeff_iter[k, 0])
+            / abs(R[1, 3] * coeff_iter[k, 3] - R[1, 0] * coeff_iter[k, 0])
             * 100
         )
         caco3_iter[k] = (
-            abs(c_temp[4])
-            / (abs(c_temp[0] + c_temp[1] - c_temp[2] - c_temp[3]) + c_temp[4])
+            abs(coeff_iter[k, 4])
+            / (abs(coeff_iter[k, 0] + coeff_iter[k, 1] - coeff_iter[k, 2] - coeff_iter[k, 3]) + coeff_iter[k, 4])
             * 100
         )
         otherDIC_iter[k] = (
-            abs(c_temp[0] + c_temp[1] - c_temp[2] - c_temp[3])
-            / (abs(c_temp[0] + c_temp[1] - c_temp[2] - c_temp[3]) + c_temp[4])
+            abs(coeff_iter[k, 0] + coeff_iter[k, 1] - coeff_iter[k, 2] - coeff_iter[k, 3])
+            / (abs(coeff_iter[k, 0] + coeff_iter[k, 1] - coeff_iter[k, 2] - coeff_iter[k, 3]) + coeff_iter[k, 4])
             * 100
         )
         relimp_iter[k, :] = [
@@ -381,42 +474,42 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
             otherDIC_iter[k],
         ]
         relnit_anmx_iter[k] = (
-            abs(R[1, 2] * c_temp[2])
+            abs(R[1, 2] * coeff_iter[k, 2])
             / abs(
-                -R[1, 2] * c_temp[2]
-                - R[1, 1] * c_temp[1]
-                - R[1, 3] * c_temp[3]
-                + R[1, 0] * c_temp[0]
+                -R[1, 2] * coeff_iter[k, 2]
+                - R[1, 1] * coeff_iter[k, 1]
+                - R[1, 3] * coeff_iter[k, 3]
+                + R[1, 0] * coeff_iter[k, 0]
             )
             * 100
         )
         relnit_denit_iter[k] = (
-            abs(R[1, 1] * c_temp[1])
+            abs(R[1, 1] * coeff_iter[k, 1])
             / abs(
-                -R[1, 2] * c_temp[2]
-                - R[1, 1] * c_temp[1]
-                - R[1, 3] * c_temp[3]
-                + R[1, 0] * c_temp[0]
+                -R[1, 2] * coeff_iter[k, 2]
+                - R[1, 1] * coeff_iter[k, 1]
+                - R[1, 3] * coeff_iter[k, 3]
+                + R[1, 0] * coeff_iter[k, 0]
             )
             * 100
         )
         relnit_nitox_iter[k] = (
-            abs(R[1, 3] * c_temp[3])
+            abs(R[1, 3] * coeff_iter[k, 3])
             / abs(
-                -R[1, 2] * c_temp[2]
-                - R[1, 1] * c_temp[1]
-                - R[1, 3] * c_temp[3]
-                + R[1, 0] * c_temp[0]
+                -R[1, 2] * coeff_iter[k, 2]
+                - R[1, 1] * coeff_iter[k, 1]
+                - R[1, 3] * coeff_iter[k, 3]
+                + R[1, 0] * coeff_iter[k, 0]
             )
             * 100
         )
         relnit_dnrn_iter[k] = (
-            abs(R[1, 0] * c_temp[0])
+            abs(R[1, 0] * coeff_iter[k, 0])
             / abs(
-                -R[1, 2] * c_temp[2]
-                - R[1, 1] * c_temp[1]
-                - R[1, 3] * c_temp[3]
-                + R[1, 0] * c_temp[0]
+                -R[1, 2] * coeff_iter[k, 2]
+                - R[1, 1] * coeff_iter[k, 1]
+                - R[1, 3] * coeff_iter[k, 3]
+                + R[1, 0] * coeff_iter[k, 0]
             )
             * 100
         )
@@ -427,60 +520,62 @@ for i in np.arange(0, len(sublayers) - 1):  # do Monte Carlo simulation for each
             relnit_dnrn_iter[k],
         ]
 
-    # Save the Results
-    coeff_mean[i, :] = np.mean(
-        coeff_iter, axis=0
-    )  # take the mean of the 1000 Monte Carlo iterations
-    coeff_se[i, :] = np.std(coeff_iter, axis=0)  # /math.sqrt(K)
-    relimp_mean[i, :] = np.nanmean(relimp_iter, axis=0)
-    relimp_se[i, :] = np.nanstd(relimp_iter, axis=0)  # /math.sqrt(K)
-    relnit_mean[i, :] = np.nanmean(relnit_iter, axis=0)
-    relnit_se[i, :] = np.nanstd(relnit_iter, axis=0)  # /math.sqrt(K)
+    # save out full Monte Carlo array so we can do statistical tests with output
+    np.savetxt(
+        #fpath.format("slopes_mean.csv"),
+        f"output/chunk{chunkID}/layer{i}_coeff_iter.csv",
+        coeff_iter,
+        delimiter=",",
+        header="DNRN, Denitrification, Anammox, Nitrite Oxidation, CaCO3 Dissolution ", #"NO3, NO2, NH4, Nstar, TA, DIC",
+    )
+    
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=RuntimeWarning) # suppress warnings for mean of empty slice
+        coeff_mean[i, :] = np.mean(
+            coeff_iter, axis=0
+        )  # take the mean of the 1000 Monte Carlo iterations
+        coeff_se[i, :] = np.std(coeff_iter, axis=0)  # /math.sqrt(K)
+        relimp_mean[i, :] = np.nanmean(relimp_iter, axis=0)
+        relimp_se[i, :] = np.nanstd(relimp_iter, axis=0)  # /math.sqrt(K)
+        relnit_mean[i, :] = np.nanmean(relnit_iter, axis=0)
+        relnit_se[i, :] = np.nanstd(relnit_iter, axis=0)  # /math.sqrt(K)
 
-    # Calculate Residuals
-    slopes_obs[i, :] = slopes_mean[i, :].T
-    slopes_est[i, :] = np.dot(Rsolve, coeff_mean[i, :])
-    residuals[i, :] = slopes_obs[i, :] - slopes_est[i, :]
-    residuals_perc[i, :] = abs(residuals[i, :]) / abs(slopes_obs[i, :]) * 100
+        # Calculate Residuals
+        slopes_obs[i, :] = slopes_mean[i, :].T
+        slopes_est[i, :] = np.dot(Rsolve, coeff_mean[i, :])
+        residuals[i, :] = slopes_obs[i, :] - slopes_est[i, :]
+        residuals_perc[i, :] = abs(residuals[i, :]) / abs(slopes_obs[i, :]) * 100
 
-for i in np.arange(0, len(sublayers) - 1):
-    lower_boundary = sublayers[i]
-    upper_boundary = sublayers[i + 1]
-    idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary))
-    if chunkID == 5:
-        idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary)
-            & (DIC < 2300))
+if makeplots == True:
+    for i in np.arange(0, len(sublayers) - 1):
+        lower_boundary = sublayers[i]
+        upper_boundary = sublayers[i + 1]
+        idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary))
+        if chunkID == 5:
+            idx_layer = np.where((sigma0 >= lower_boundary) & (sigma0 <= upper_boundary)
+                & (DIC < 2300))
 
-    # Robust Regression
-    if len(DIC[idx_layer]) > 0:
-        xx = sm.add_constant(DIC[idx_layer])
-        rf_NO3 = sm.OLS(NO3[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_NO2 = sm.OLS(NO2[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        #rf_NH4 = sm.RLM(NH4[idx_layer], xx, M=sm.robust.norms.HuberT()).fit()
-        rf_Nstar = sm.OLS(Nstar[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_TA = sm.OLS(TA[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        rf_DIC = sm.OLS(DIC[idx_layer], xx, 
-            #M=sm.robust.norms.HuberT()
-            ).fit()
-        quickplot(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
-            "[DIC]", "[NO3-]", lower_boundary, upper_boundary, slopes_est[i,0])
-        quickplot(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
-            "[DIC]", "[NO2-]", lower_boundary, upper_boundary, slopes_est[i,1])
-        quickplot(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, 
-            "[DIC]", "N*", lower_boundary, upper_boundary, slopes_est[i,2])
-        quickplot(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, 
-            "[DIC]", "TA", lower_boundary, upper_boundary, slopes_est[i,3])
-        quickplot(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
-            "[DIC]", "[DIC]", lower_boundary, upper_boundary, slopes_est[i,4])
-
+        # Robust Regression
+        if len(DIC[idx_layer]) > 0:
+            xx = sm.add_constant(DIC[idx_layer])
+            rf_NO3, ols_NO3, loss_NO3, sse_NO3 = huberregression(NO3[idx_layer], xx)
+            rf_NO2, ols_NO2, loss_NO2, sse_NO2 = huberregression(NO2[idx_layer], xx)
+            #rf_NH4, ols_NH4, loss_NH4, sse_NH4 = huberregression(NH4[idx_layer], xx)
+            rf_Nstar, ols_Nstar, loss_Nstar, sse_Nstar = huberregression(Nstar[idx_layer], xx)
+            rf_TA, ols_TA, loss_TA, sse_TA = huberregression(TA[idx_layer], xx)
+            rf_DIC, ols_DIC, loss_DIC, sse_DIC = huberregression(DIC[idx_layer], xx)
+            '''
+            plotobsest(DIC[idx_layer], NO3[idx_layer], sigma0[idx_layer], rf_NO3, 
+                "[DIC]", "[NO3-]", lower_boundary, upper_boundary, slopes_est[i,0])
+            plotobsest(DIC[idx_layer], NO2[idx_layer], sigma0[idx_layer], rf_NO2, 
+                "[DIC]", "[NO2-]", lower_boundary, upper_boundary, slopes_est[i,1])
+            plotobsest(DIC[idx_layer], Nstar[idx_layer], sigma0[idx_layer], rf_Nstar, 
+                "[DIC]", "N*", lower_boundary, upper_boundary, slopes_est[i,2])
+            plotobsest(DIC[idx_layer], TA[idx_layer], sigma0[idx_layer], rf_TA, 
+                "[DIC]", "TA", lower_boundary, upper_boundary, slopes_est[i,3])
+            plotobsest(DIC[idx_layer], DIC[idx_layer], sigma0[idx_layer], rf_DIC, 
+                "[DIC]", "[DIC]", lower_boundary, upper_boundary, slopes_est[i,4])
+            '''
 ### Save the Outputs as a CSV file ###
 np.savetxt(
     #fpath.format("slopes_mean.csv"),
@@ -501,14 +596,14 @@ np.savetxt(
     f"output/chunk{chunkID}/coeffs_mean.csv",
     coeff_mean,
     delimiter=",",
-    header="DNRN, Anammox, Denitrificatio, Nitrite Oxidation, CaCO3 Dissolution ",
+    header="DNRN, Anammox, Denitrification, Nitrite Oxidation, CaCO3 Dissolution ",
 )
 np.savetxt(
     #fpath.format("coeffs_se.csv"),
     f"output/chunk{chunkID}/coeffs_se.csv",
     coeff_se,
     delimiter=",",
-    header="DNRN, Anammox, Denitrificatio, Nitrite Oxidation, CaCO3 Dissolution ",
+    header="DNRN, Anammox, Denitrification, Nitrite Oxidation, CaCO3 Dissolution ",
 )
 np.savetxt(
     #fpath.format("relative_importances_mean.csv"),

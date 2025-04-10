@@ -20,7 +20,7 @@ import numpy as np
 output_path = "output/OM_variations/{}"
 
 # Select Method
-method = "anderson"  # select: "experimental", "anderson", "redfield", "oxidation_states" "redfield_oxidation_states"
+method = "experimental"  # select: "experimental", "anderson", "redfield", "oxidation_states" "redfield_oxidation_states"
 # Experimental refers to CNP ratio etc calculated in cacl_oxycline_features
 # _oxidation states refers to the sensitivity analysis
 
@@ -137,11 +137,11 @@ elif method == "anderson":  # anderson 1995
     np.savetxt(output_path.format("anderson/R.txt"), R, delimiter=",")
     print("done")
 
-# Experimental Chanrged OM
+# Experimentally determined stoichiometry of OM
 elif method == "experimental":
-    # Parameters
-    C = 110.545  # these come from the printout from "calc_oxycline_features.py"
-    N = 11.416
+    # Parameters come from the printout from "calc_oxycline_features_argo.ipynb
+    C = 113.1  # experimentally determined C:P of OM - interesting that it's so high
+    N = 11.23 # meanwhile N:P is quite low
     P = 1
     charge = 0
     Cox = 0.77

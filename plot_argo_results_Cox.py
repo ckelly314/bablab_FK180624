@@ -46,11 +46,11 @@ elif chunkID == 7:
     stations = np.arange(1,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
-elif chunkID == "lownitrite":
+elif chunkID == "highnitrite":
     stations = np.arange(1,30)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
-elif chunkID == "highnitrite":
+elif chunkID == "lownitrite":
     stations = np.arange(30,72)
     # Define Layers
     layers = np.array([25.8, 26.1, 26.35, 26.5,27.2], dtype=float)  # in sigma0
@@ -74,6 +74,13 @@ layers = np.unique(sl)
 
 # Import Parameters and Results
 data = pd.read_csv("data_clean.csv")
+# check dates
+stationdict = {"highnitrite":np.arange(1,30),
+               "lownitrite":np.arange(30,72)}  # in sigma0
+mindate = data[np.isin(data.Station, stationdict[chunkID])].Date.unique().min()
+maxdate = data[np.isin(data.Station, stationdict[chunkID])].Date.unique().max()
+print(chunkID, mindate, maxdate)
+
 coeffs_mean = np.array(pd.read_csv(f"output/chunk{chunkID}/coeffs_mean.csv")
     #data_path.format("coeffs_mean.csv"))
 )
@@ -171,7 +178,7 @@ hm.set_xticklabels(
 )
 hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Standard Deviation")
-fig1.suptitle(f"Stations {stations[0]}-{stations[-1]}")
+fig1.suptitle(f"{mindate} to {maxdate}")
 fig1.tight_layout(pad=2.5)
 plt.savefig(
     #fig_path.format("reaction_coefficients.{}".format(fig_format))
@@ -233,7 +240,7 @@ hm.set_xticklabels(
 hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Percentage Residuals")
 fig2.tight_layout(pad=2.5)
-fig2.suptitle(f"Stations {stations[0]}-{stations[-1]}")
+fig2.suptitle(f"{mindate} to {maxdate}")
 plt.savefig(
     #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/residuals.PDF"
@@ -294,7 +301,7 @@ hm.set_xticklabels(
 hm.set_yticklabels(labels=ylabels, size=8, rotation=45)
 hm.set_title("Estimated slopes")
 fig2b.tight_layout(pad=2.5)
-fig2b.suptitle(f"Stations {stations[0]}-{stations[-1]}")
+fig2b.suptitle(f"{mindate} to {maxdate}")
 plt.savefig(
     #fig_path.format("residuals.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/slopesobsest.PDF"
@@ -515,7 +522,7 @@ ax6.axes.yaxis.set_ticklabels([])
 ax6.legend(loc=3, fontsize=8)
 
 fig3.tight_layout(pad=2.5)
-fig3.suptitle(f"Stations {stations[0]}-{stations[-1]}")
+fig3.suptitle(f"{mindate} to {maxdate}")
 plt.savefig(
     #fig_path.format("relative_importances.{}".format(fig_format)), dpi=dpi
     f"figures/chunk{chunkID}/relative_importances.PDF"
@@ -553,7 +560,7 @@ ax.tick_params(axis="y", labelsize=fs + 3)
 ax.legend(loc=3, fontsize=13)
 ax.invert_yaxis()
 
-ax.set_title(f"Stations {stations[0]}-{stations[-1]}", fontsize=13)
+ax.set_title(f"{mindate} to {maxdate}", fontsize=13)
 
 fig4.tight_layout()
 plt.savefig(

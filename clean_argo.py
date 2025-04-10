@@ -42,41 +42,35 @@ OUTPUT:
 import pandas as pd
 import numpy as np
 import gsw
-#import PyCO2SYS as pyco2
 
-def round_off(series):
-    return round(series * 2) / 2
+data = pd.read_csv("CANYONB_output.csv")
 
-def customround(series, base=5):
-    return base * round(series/base)
-
-data = pd.read_csv("5906484qcno2PO4.txt",skiprows = 71, sep='\t',
-    parse_dates = ['mon/day/yr'], na_values = [-10000000000.0])
+# remove extra index column
+del data["Var1"]
 
 # rename columns
 cols = {
     'Station': "station",
     'Lat [°N]': "lat",
     'Lon [°E]': "lon",
-    'Pressure[dbar]': "press",
-    'Temperature[°C]': "temperature",
-    'QF.2':'temp_flag',
-    'Salinity[pss]': "sal",
-    'QF.3': "sal_flag",
-    'Oxygen[µmol/kg]': "O2",
-    'QF.6': "O2_flag",
-    'Nitrate[µmol/kg]':"NO3",
-    'QF.8':'NO3_flag',
-    'Nitrite[µmol/kg]': "NO2",
-    'QF.17': "NO2_flag",
-    'PO4_CANY[µmol/kg]': "phosphate",
-    'QF.19': "phosphate_flag",
-    'pHinsitu[Total]': "pH_insitu",
-    'QF.12': "pH_insitu_flag",
-    'TALK_LIAR[µmol/kg]':'TA',
-    'QF.14':"TA_flag",
-    'DIC_LIAR[µmol/kg]':'DIC',
-    'QF.15':'DIC_flag'
+    'pres': "press",
+    'temp': "temperature",
+    'QF_2':'temp_flag',
+    'psal': "sal",
+    'QF_3': "sal_flag",
+    'doxy': "O2",
+    'QF_6': "O2_flag",
+    'Nitrate__mol_kg_':"NO3",
+    'QF_8':'NO3_flag',
+    'Nitrite__mol_kg_': "NO2",
+    'QF_17': "NO2_flag",
+    'PO4_CANY': "phosphate",
+    'pHinsitu_Total_': "pH_insitu",
+    'QF_12': "pH_insitu_flag",
+    'TALK_LIAR__mol_kg_':'TA',
+    'QF_14':"TA_flag",
+    'DIC_LIAR__mol_kg_':'DIC',
+    'QF_15':'DIC_flag'
 }
 data = data.rename(columns=cols)
 
@@ -88,7 +82,6 @@ idx_flag = np.where(
     & (np.isin(data["sal_flag"], flag_good))
     & (np.isin(data["O2_flag"], flag_good))
     & (np.isin(data["NO3_flag"], flag_good))
-    & (np.isin(data["phosphate_flag"], flag_good))
     & (np.isin(data["pH_insitu_flag"], flag_good))
     & (np.isin(data["TA_flag"], flag_good))
     & (np.isin(data["NO2_flag"], flag_good))
@@ -126,8 +119,8 @@ data["pH_insitu"] = Z["pH_out"]
 '''
 
 # Remove Bad Data and Save New Vectors
-depth = np.array(data['Depth[m]'])[idx_flag]  # degrees C
-date = np.array(data['mon/day/yr'])[idx_flag]
+depth = np.array(data['Depth_m_'])[idx_flag]  # degrees C
+date = np.array(data['mon_day_yr'])[idx_flag]
 T = np.array(data["temperature"])[idx_flag]  # degrees C
 S = np.array(data["sal"])[idx_flag]  # psu
 P = np.array(data["press"])[idx_flag]  # dbar
@@ -142,7 +135,6 @@ TA = np.array(data["TA"])[idx_flag]  # umol/kg
 pH = np.array(data["pH_insitu"])[idx_flag]
 O2 = np.array(data["O2"])[idx_flag]  # umol/kg
 station = np.array(data["station"])[idx_flag]
-#cast = np.array(data["cast"])[idx_flag]
 lat = np.array(data["lat"])[idx_flag]
 lon = np.array(data["lon"])[idx_flag]
 #pH_tot = np.array(data["pH_tot"])[idx_flag]
